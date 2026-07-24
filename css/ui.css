@@ -599,3 +599,98 @@ input[type="range"] {
   justify-content: center;
 }
 #password-modal.open { display: flex; }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* ── Global ── */
+  .glass-panel { padding: var(--gap-lg); }
+
+  /* ── Nickname / Play / Create panels ── */
+  .nickname-modal,
+  .play-panel,
+  .create-panel { max-width: 100%; width: 95%; }
+
+  .game-logo   { font-size: var(--font-size-2xl); }
+  .menu-title  { font-size: var(--font-size-3xl); }
+  .screen-title{ font-size: var(--font-size-base); }
+
+  /* ── Menu buttons ── */
+  .menu-buttons { width: 90%; }
+  .menu-btn { padding: 14px 18px; font-size: 0.55rem; }
+
+  /* ── Play cards ── */
+  .play-options {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm);
+  }
+  .play-card { aspect-ratio: unset; padding: var(--gap-md); min-height: 90px; }
+  .play-card-icon { font-size: 1.8rem; }
+  .play-card-label { font-size: 0.45rem; }
+
+  /* ── Browse ── */
+  #browse-screen { padding: var(--gap-md); }
+  .browse-header { gap: var(--gap-sm); }
+  .browse-search { min-width: 100%; }
+  .browse-filters { width: 100%; justify-content: flex-end; }
+
+  .room-card { padding: var(--gap-sm) var(--gap-md); }
+  .room-name { font-size: 0.5rem; }
+  .room-meta { font-size: 0.4rem; gap: var(--gap-sm); }
+
+  .browse-footer {
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+  }
+  .browse-footer .btn { flex: 1; font-size: 0.45rem; padding: 10px 8px; }
+
+  /* ── Create ── */
+  .form-row { grid-template-columns: 1fr; }
+
+  /* ── Lobby ── */
+  #lobby-screen { padding: var(--gap-md); }
+  .lobby-container { gap: var(--gap-md); }
+  .lobby-room-name { font-size: var(--font-size-sm); }
+  .lobby-map-badge { font-size: 0.4rem; padding: 4px 10px; }
+
+  .lobby-players {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm);
+  }
+  .lobby-player-card { min-height: 72px; padding: var(--gap-sm); gap: var(--gap-sm); }
+  .player-avatar { width: 32px; height: 32px; font-size: 1rem; }
+  .player-nick { font-size: 0.4rem; }
+  .player-role { font-size: 0.35rem; }
+
+  .lobby-controls { gap: var(--gap-sm); }
+  .lobby-controls .btn { font-size: 0.45rem; padding: 10px 12px; }
+  .lobby-controls .neon-select { font-size: 0.4rem; padding: 8px 10px; }
+  .lobby-hint { font-size: 0.4rem; }
+
+  /* ── Winner ── */
+  .winner-trophy { font-size: 3.5rem; }
+  .winner-label  { font-size: var(--font-size-lg); }
+  .winner-name   { font-size: var(--font-size-xl); }
+  .winner-buttons { gap: var(--gap-md); }
+  .winner-buttons .btn { font-size: 0.5rem; padding: 12px 18px; }
+
+  /* ── Countdown ── */
+  .countdown-number { font-size: 5rem; }
+  .countdown-go     { font-size: 3.5rem; }
+
+  /* ── Modals ── */
+  .modal-box { width: 95%; max-height: 85vh; }
+  .modal-title { font-size: var(--font-size-sm); }
+
+  /* ── Buttons global ── */
+  .btn-lg { font-size: 0.6rem; padding: 14px 24px; }
+}
+
+@media (max-width: 380px) {
+  .game-logo   { font-size: var(--font-size-xl); }
+  .menu-title  { font-size: var(--font-size-2xl); }
+  .lobby-players { grid-template-columns: 1fr; }
+}
+

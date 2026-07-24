@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    /* Prevent double-tap zoom & text selection globally */
+    * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { user-select: none; -webkit-user-select: none; }
+  </style>
   <title>Papap Dol — Multiplayer Arcade Bomber</title>
   <meta name="description" content="Fast-paced browser multiplayer arcade game inspired by Bomberman. No login required — just pick a nickname and explode your friends!">
   <meta property="og:title" content="Papap Dol">

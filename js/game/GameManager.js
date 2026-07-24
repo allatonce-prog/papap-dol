@@ -2,11 +2,12 @@
 //  PAPAP DOL — Game Manager (orchestrates everything)
 // ============================================================
 import { GameMap }      from './Map.js';
-import { Player }       from './Player.js';
+import { Player, KEYS } from './Player.js';
 import { RemotePlayer } from './RemotePlayer.js';
 import { Bomb, Explosion, Spark } from './Bomb.js';
 import { PowerUp }      from './PowerUp.js';
 import { Renderer }     from './Renderer.js';
+import { MobileControls } from './MobileControls.js';
 import {
   TILE_SIZE, CANVAS_W, CANVAS_H,
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
@@ -52,6 +53,7 @@ export class GameManager {
     this._unsubRoom   = null;
     this._gameOver    = false;
     this._processedExplosions = new Set(); // bomb IDs already exploded locally
+    this._mobileControls = null;
 
     // Renderer
     const canvas = document.getElementById('game-canvas');
@@ -94,6 +96,11 @@ export class GameManager {
     Object.entries(this.roomData.powerUps || {}).forEach(([id, p]) => {
       this.powerUps.set(id, new PowerUp(id, p));
     });
+
+    // Mobile controls (only on touch devices)
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      this._mobileControls = new MobileControls(KEYS);
+    }
 
     // Subscribe to Firebase
     this._unsubRoom = watchRoom(this.roomId, snap => this._onRoomUpdate(snap));
@@ -427,5 +434,6 @@ export class GameManager {
     this.running = false;
     if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
     if (this._unsubRoom) { this._unsubRoom(); this._unsubRoom = null; }
+    if (this._mobileControls) { this._mobileControls.destroy(); this._mobileControls = null; }
   }
 }

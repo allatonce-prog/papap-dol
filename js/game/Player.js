@@ -7,7 +7,8 @@ import {
 } from '../utils/constants.js';
 import { sfxBombPlace } from './Audio.js';
 
-const KEYS = {};
+export const KEYS = {};
+
 const INPUT_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 document.addEventListener('keydown', e => {
   if (INPUT_TAGS.has(e.target.tagName)) return; // let text fields type normally

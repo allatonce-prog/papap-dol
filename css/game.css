@@ -205,3 +205,144 @@
   color: var(--accent-yellow);
   text-shadow: 0 0 40px rgba(255,204,0,0.8);
 }
+
+/* ── MOBILE CONTROLS OVERLAY ─────────────────────────────────── */
+#mobile-controls {
+  display: none; /* JS shows it only on touch devices */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  z-index: 200;
+  pointer-events: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 16px;
+}
+
+/* Joystick side */
+#joy-zone {
+  pointer-events: all;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#joy-base {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.18);
+  box-shadow: 0 0 20px rgba(0,212,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  backdrop-filter: blur(4px);
+}
+
+#joy-knob {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(0,212,255,0.9), rgba(0,100,200,0.7));
+  border: 2px solid rgba(0,212,255,0.8);
+  box-shadow: 0 0 14px rgba(0,212,255,0.6);
+  transition: transform 0.05s linear;
+  pointer-events: none;
+}
+
+/* Action buttons side */
+#action-zone {
+  pointer-events: all;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+#btn-mobile-bomb {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e94560, #8b0020);
+  border: 3px solid rgba(233,69,96,0.9);
+  box-shadow: 0 0 20px rgba(233,69,96,0.7), inset 0 2px 4px rgba(255,255,255,0.2);
+  font-size: 1.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+#btn-mobile-bomb:active {
+  transform: scale(0.9);
+  box-shadow: 0 0 10px rgba(233,69,96,0.5);
+}
+
+#btn-mobile-detonate {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255,204,0,0.9), rgba(180,100,0,0.7));
+  border: 2px solid rgba(255,204,0,0.8);
+  box-shadow: 0 0 14px rgba(255,204,0,0.5);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+#btn-mobile-detonate:active { transform: scale(0.88); }
+
+/* ── RESPONSIVE: scale canvas + shrink HUD on mobile ─────────── */
+@media (max-width: 700px) {
+  .game-area {
+    gap: 4px;
+    padding-bottom: 188px; /* room for mobile controls */
+    justify-content: flex-start;
+    padding-top: 4px;
+  }
+
+  #game-hud {
+    max-width: 100%;
+    padding: 4px 8px;
+    gap: 6px;
+    font-size: 0.38rem;
+  }
+
+  .hud-player {
+    padding: 4px 8px;
+    gap: 5px;
+    font-size: 0.38rem;
+  }
+
+  .canvas-wrapper {
+    /* Scale canvas to fit width */
+    max-width: calc(100vw - 8px);
+    overflow: hidden;
+  }
+
+  #game-canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  #mobile-controls {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-area {
+    padding-bottom: 192px;
+  }
+}
+
