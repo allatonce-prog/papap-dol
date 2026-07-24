@@ -130,7 +130,12 @@ export class Player {
       if (this.map.isCrate(tx, ty) && !this.canGhost) return true;
       // Bomb collision: treat bomb tiles as solid except grace tiles
       const key = `${tx},${ty}`;
-      if (this.game.hasBombAt(tx, ty) && !this._graceTiles.has(key)) return true;
+      if (this.game.hasBombAt(tx, ty) && !this._graceTiles.has(key)) {
+        if (this.canKick) {
+          this.game.kickBomb(tx, ty, this.direction);
+        }
+        return true;
+      }
     }
     return false;
   }

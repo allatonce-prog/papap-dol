@@ -252,6 +252,15 @@ export class GameManager {
         }
         if (bot.alive) {
           bot.update(dt);
+          // Check if bot collects power-up
+          this.powerUps.forEach((pu, puid) => {
+            if (!pu.collected && pu.overlapsPlayer(bot.px, bot.py)) {
+              pu.collected = true;
+              this.powerUps.delete(puid);
+              sfxPowerUp();
+              fbCollectPowerUp(this.roomId, puid).catch(() => {});
+            }
+          });
         }
       });
     }
@@ -325,6 +334,10 @@ export class GameManager {
     Object.entries(fbBombs).forEach(([id, b]) => {
       if (!this.bombs.has(id)) {
         this.bombs.set(id, new Bomb(id, b, this.map));
+      } else {
+        const existing = this.bombs.get(id);
+        existing.x = b.x;
+        existing.y = b.y;
       }
     });
     // Remove bombs no longer in DB
@@ -369,6 +382,68 @@ export class GameManager {
       if (b.x === tx && b.y === ty) return true;
     }
     return false;
+  }
+
+  kickBomb(tx, ty, dir) {
+    let targetBomb = null;
+    this.bombs.forEach(b => {
+      if (b.x === tx && b.y === ty) targetBomb = b;
+    });
+    if (!targetBomb) return;
+
+    // Avoid double kicks if already sliding
+    const targetPx = targetBomb.x * TILE_SIZE + TILE_SIZE / 2;
+    const targetPy = targetBomb.y * TILE_SIZE + TILE_SIZE / 2;
+    if (Math.abs(targetBomb.visualPx - targetPx) > 5 || Math.abs(targetBomb.visualPy - targetPy) > 5) {
+      return;
+    }
+
+    let dx = 0, dy = 0;
+    if (dir === 'up')    dy = -1;
+    if (dir === 'down')  dy = 1;
+    if (dir === 'left')  dx = -1;
+    if (dir === 'right') dx = 1;
+    if (dx === 0 && dy === 0) return;
+
+    let destX = tx;
+    let destY = ty;
+
+    while (true) {
+      const nextX = destX + dx;
+      const nextY = destY + dy;
+
+      if (this.map.isWall(nextX, nextY)) break;
+      if (this.map.isCrate(nextX, nextY)) break;
+      if (this.hasBombAt(nextX, nextY)) break;
+
+      // Check if a player is standing on the next tile
+      let playerOnTile = false;
+      const allPlayers = [
+        ...this.remotePlayers.values(),
+        this.localPlayer
+      ].filter(Boolean);
+      for (const p of allPlayers) {
+        if (p.alive) {
+          const ptx = Math.round(p.px / TILE_SIZE);
+          const pty = Math.round(p.py / TILE_SIZE);
+          if (ptx === nextX && pty === nextY) {
+            playerOnTile = true;
+            break;
+          }
+        }
+      }
+      if (playerOnTile) break;
+
+      destX = nextX;
+      destY = nextY;
+    }
+
+    if (destX !== tx || destY !== ty) {
+      updateRoom(this.roomId, {
+        [`bombs/${targetBomb.id}/x`]: destX,
+        [`bombs/${targetBomb.id}/y`]: destY
+      }).catch(() => {});
+    }
   }
 
   // ── Explosion ─────────────────────────────────────────────── 

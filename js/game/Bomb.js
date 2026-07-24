@@ -24,10 +24,14 @@ export class Bomb {
     this.map      = map;
     this.exploded = false;
     this._pulse   = 0;
+
+    // Track visual pixels for smooth sliding animation
+    this.visualPx = data.x * TILE_SIZE + TILE_SIZE / 2;
+    this.visualPy = data.y * TILE_SIZE + TILE_SIZE / 2;
   }
 
-  get px() { return this.x * TILE_SIZE + TILE_SIZE / 2; }
-  get py() { return this.y * TILE_SIZE + TILE_SIZE / 2; }
+  get px() { return this.visualPx; }
+  get py() { return this.visualPy; }
 
   /** 0→1, progress of fuse */
   get fuseProgress() {
@@ -42,6 +46,23 @@ export class Bomb {
 
   update(dt) {
     this._pulse = (this._pulse + dt * 4) % (Math.PI * 2);
+
+    // Smoothly slide towards the target tile coordinates
+    const targetPx = this.x * TILE_SIZE + TILE_SIZE / 2;
+    const targetPy = this.y * TILE_SIZE + TILE_SIZE / 2;
+    const slideSpeed = 360; // pixels per second (~7.5 tiles/sec)
+
+    const dx = targetPx - this.visualPx;
+    const dy = targetPy - this.visualPy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist > 1) {
+      this.visualPx += (dx / dist) * Math.min(slideSpeed * dt, dist);
+      this.visualPy += (dy / dist) * Math.min(slideSpeed * dt, dist);
+    } else {
+      this.visualPx = targetPx;
+      this.visualPy = targetPy;
+    }
   }
 
   /** Radius for drawing (pulses based on fuse) */
