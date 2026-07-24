@@ -139,76 +139,7 @@ export class GameManager {
       btn.onclick = handler;
     });
 
-    // Wire chat toggle button (for mobile/tablet)
-    const toggleBtn = document.getElementById('btn-ingame-chat-toggle');
-    const chatContainer = document.getElementById('ingame-chat-container');
-    if (toggleBtn && chatContainer) {
-      toggleBtn.onclick = (e) => {
-        e.preventDefault();
-        const isOpen = chatContainer.classList.toggle('mobile-open');
-        if (isOpen) {
-          document.getElementById('ingame-chat-input')?.focus();
-        }
-      };
-    }
 
-    // In-game Chat handler (Enter to type, Enter to send)
-    this._chatKeyHandler = (e) => {
-      if (e.code === 'Enter') {
-        const input = document.getElementById('ingame-chat-input');
-        if (!input) return;
-        if (document.activeElement === input) {
-          const text = input.value.trim();
-          if (text) {
-            const color = PLAYER_COLORS[this.localPlayer?.colorIndex ?? 0];
-            sendChatMessage(this.roomId, {
-              sender: this.localPlayer?.nickname || 'Guest',
-              text: text,
-              color: color,
-            }).catch(() => {});
-          }
-          input.value = '';
-          input.blur();
-          if (chatContainer) chatContainer.classList.remove('mobile-open');
-        } else {
-          e.preventDefault();
-          if (chatContainer) chatContainer.classList.add('mobile-open');
-          input.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', this._chatKeyHandler);
-
-    // Prevent game key handlers from locking up when typing in chat form
-    const ingameForm = document.getElementById('ingame-chat-form');
-    if (ingameForm) {
-      ingameForm.onsubmit = (e) => e.preventDefault();
-    }
-
-    const chatInput = document.getElementById('ingame-chat-input');
-    if (chatInput && chatContainer) {
-      chatInput.addEventListener('blur', () => {
-        setTimeout(() => {
-          chatContainer.classList.remove('mobile-open');
-        }, 150);
-      });
-    }
-
-    // Start watching in-game chat
-    const chatMsgDiv = document.getElementById('ingame-chat-messages');
-    if (chatMsgDiv) chatMsgDiv.innerHTML = '';
-    this._unsubChat = watchChat(this.roomId, chatData => {
-      const list = Object.values(chatData || {}).sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
-      if (chatMsgDiv) {
-        chatMsgDiv.innerHTML = list.map(m => `
-          <div class="ingame-chat-msg">
-            <span style="color:${m.color || '#fff'}">${this._escHtml(m.sender)}:</span>
-            <span>${this._escHtml(m.text)}</span>
-          </div>
-        `).join('');
-        chatMsgDiv.scrollTop = chatMsgDiv.scrollHeight;
-      }
-    });
 
     // Wire in-game settings + exit buttons
     document.getElementById('btn-ingame-settings')?.addEventListener('click', () => {
@@ -623,17 +554,5 @@ export class GameManager {
     if (this._unsubRoom) { this._unsubRoom(); this._unsubRoom = null; }
     if (this._mobileControls) { this._mobileControls.destroy(); this._mobileControls = null; }
     if (this._cancelHostPresence) { this._cancelHostPresence = null; }
-    if (this._chatKeyHandler) {
-      document.removeEventListener('keydown', this._chatKeyHandler);
-      this._chatKeyHandler = null;
-    }
-    if (this._unsubChat) {
-      this._unsubChat();
-      this._unsubChat = null;
-    }
-  }
-
-  _escHtml(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }
