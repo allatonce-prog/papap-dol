@@ -277,7 +277,7 @@ async function handleStartGame() {
         px: spawn.x * TILE_SIZE + TILE_SIZE / 2,
         py: spawn.y * TILE_SIZE + TILE_SIZE / 2,
         direction: 'down',
-        speed: 130, // Bot moves slightly slower
+        speed: 165, // Bot moves slightly faster now
         bombCapacity: 1,
         explosionRange: 1,
         shield: false,

@@ -1,6 +1,6 @@
 // ============================================================
 //  PAPAP DOL — Bot AI
-//  Basic AI behavior tree for computer-controlled opponents.
+//  Advanced AI state machine for competitive bot opponents.
 //  Executes on the host client and syncs positions to Firebase.
 // ============================================================
 
@@ -20,7 +20,8 @@ export class BotAI {
     this.targetTx = Math.floor(this.px / TILE_SIZE);
     this.targetTy = Math.floor(this.py / TILE_SIZE);
     
-    this.speed = initialData.speed || 130;
+    // Increased default speed from 130 to 165 to make them competitive
+    this.speed = initialData.speed || 165;
     this.direction = 'down';
     this.alive = true;
     this.activeBombs = 0;
@@ -70,6 +71,7 @@ export class BotAI {
       { x: cx + 1, y: cy, dir: 'right' }
     ].filter(m => this._isValidMove(m.x, m.y));
 
+    // 1. ESCAPE DANGER FIRST
     if (isCurrentTileDangerous) {
       const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
       if (safeMoves.length > 0) {
@@ -84,12 +86,52 @@ export class BotAI {
         this.targetTy = choice.y;
         return;
       }
+      return; // stand still if trapped
     }
 
+    const targetPlayer = this._getClosestPlayer(cx, cy);
+
+    // 2. AGGRESSIVE BOMB ATTACK (if player is lined up within range)
+    if (targetPlayer && this.bombCooldown <= 0 && this.activeBombs < 1) {
+      const dist = Math.abs(cx - targetPlayer.x) + Math.abs(cy - targetPlayer.y);
+      const isLinedUp = (cx === targetPlayer.x || cy === targetPlayer.y) && dist <= 3;
+      if (isLinedUp) {
+        this._plantBomb(cx, cy);
+        this.bombCooldown = 2.0; // reduced cooldown from 4.0 to 2.0
+
+        // Evacuate immediately
+        const dangerWithNewBomb = this._getDangerTiles();
+        const safeMoves = moves.filter(m => !dangerWithNewBomb.has(`${m.x},${m.y}`));
+        if (safeMoves.length > 0) {
+          const choice = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+          this.targetTx = choice.x;
+          this.targetTy = choice.y;
+          return;
+        }
+      }
+    }
+
+    // 3. TARGET POWER-UPS
+    const targetPU = this._getClosestPowerUp(cx, cy);
+    if (targetPU) {
+      const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
+      if (safeMoves.length > 0) {
+        safeMoves.sort((a, b) => {
+          const distA = Math.abs(a.x - targetPU.x) + Math.abs(a.y - targetPU.y);
+          const distB = Math.abs(b.x - targetPU.x) + Math.abs(b.y - targetPU.y);
+          return distA - distB;
+        });
+        this.targetTx = safeMoves[0].x;
+        this.targetTy = safeMoves[0].y;
+        return;
+      }
+    }
+
+    // 4. CLEAR CRATES
     const hasAdjacentCrate = this._hasAdjacentCrate(cx, cy);
     if (hasAdjacentCrate && this.activeBombs < 1 && this.bombCooldown <= 0) {
       this._plantBomb(cx, cy);
-      this.bombCooldown = 4.0;
+      this.bombCooldown = 2.0; // reduced cooldown to 2.0
       
       const dangerWithNewBomb = this._getDangerTiles();
       const safeMoves = moves.filter(m => !dangerWithNewBomb.has(`${m.x},${m.y}`));
@@ -101,14 +143,33 @@ export class BotAI {
       }
     }
 
+    // 5. CHASE/PATH TO CLOSEST PLAYER
+    if (targetPlayer) {
+      const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
+      if (safeMoves.length > 0) {
+        safeMoves.sort((a, b) => {
+          const distA = Math.abs(a.x - targetPlayer.x) + Math.abs(a.y - targetPlayer.y);
+          const distB = Math.abs(b.x - targetPlayer.x) + Math.abs(b.y - targetPlayer.y);
+          return distA - distB;
+        });
+        this.targetTx = safeMoves[0].x;
+        this.targetTy = safeMoves[0].y;
+        return;
+      }
+    }
+
+    // 6. DEFAULT WANDER
     if (moves.length > 0) {
-      const oppositeDir = { 'up': 'down', 'down': 'up', 'left': 'right', 'right': 'left' }[this.direction];
-      const forwardMoves = moves.filter(m => m.dir !== oppositeDir);
+      const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
+      const pool = safeMoves.length > 0 ? safeMoves : moves;
       
-      const pool = forwardMoves.length > 0 ? forwardMoves : moves;
-      const choice = pool[Math.floor(Math.random() * pool.length)];
-      this.targetTx = choice.x;
-      this.targetTy = choice.y;
+      const oppositeDir = { 'up': 'down', 'down': 'up', 'left': 'right', 'right': 'left' }[this.direction];
+      const forwardMoves = pool.filter(m => m.dir !== oppositeDir);
+      
+      const choice = forwardMoves.length > 0 ? forwardMoves : pool;
+      const finalMove = choice[Math.floor(Math.random() * choice.length)];
+      this.targetTx = finalMove.x;
+      this.targetTy = finalMove.y;
     }
   }
 
@@ -125,6 +186,50 @@ export class BotAI {
       this.map.isCrate(tx - 1, ty),
       this.map.isCrate(tx + 1, ty)
     ].some(Boolean);
+  }
+
+  _getClosestPlayer(cx, cy) {
+    let closest = null;
+    let minDist = Infinity;
+
+    if (this.game.localPlayer && this.game.localPlayer.alive) {
+      const px = Math.floor(this.game.localPlayer.px / TILE_SIZE);
+      const py = Math.floor(this.game.localPlayer.py / TILE_SIZE);
+      const dist = Math.abs(px - cx) + Math.abs(py - cy);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = { x: px, y: py };
+      }
+    }
+
+    this.game.remotePlayers.forEach((p, pid) => {
+      if (p.alive && !pid.startsWith('bot_')) {
+        const px = Math.floor(p.px / TILE_SIZE);
+        const py = Math.floor(p.py / TILE_SIZE);
+        const dist = Math.abs(px - cx) + Math.abs(py - cy);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = { x: px, y: py };
+        }
+      }
+    });
+
+    return closest;
+  }
+
+  _getClosestPowerUp(cx, cy) {
+    let closest = null;
+    let minDist = Infinity;
+    this.game.powerUps.forEach(pu => {
+      const pux = Math.floor(pu.px / TILE_SIZE);
+      const puy = Math.floor(pu.py / TILE_SIZE);
+      const dist = Math.abs(pux - cx) + Math.abs(puy - cy);
+      if (dist < minDist && dist <= 5) {
+        minDist = dist;
+        closest = { x: pux, y: puy };
+      }
+    });
+    return closest;
   }
 
   _getDangerTiles() {
