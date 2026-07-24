@@ -17,7 +17,8 @@ import {
   watchRoom, updatePlayer, placeBomb as fbPlaceBomb,
   removeBomb as fbRemoveBomb, destroyCrate as fbDestroyCrate,
   spawnPowerUp as fbSpawnPowerUp, collectPowerUp as fbCollectPowerUp,
-  setWinner, updateRoom,
+  setWinner, updateRoom, deleteRoom, removePlayer,
+  setupHostRoomPresence,
 } from '../firebase.js';
 import {
   sfxExplosion, sfxDeath, sfxPowerUp, sfxBombPlace,
@@ -53,7 +54,8 @@ export class GameManager {
     this._unsubRoom   = null;
     this._gameOver    = false;
     this._processedExplosions = new Set(); // bomb IDs already exploded locally
-    this._mobileControls = null;
+    this._mobileControls      = null;
+    this._cancelHostPresence  = null; // fn to cancel onDisconnect room removal
 
     // Renderer
     const canvas = document.getElementById('game-canvas');
@@ -101,6 +103,23 @@ export class GameManager {
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       this._mobileControls = new MobileControls(KEYS);
     }
+
+    // Host: auto-delete room on disconnect so all players get kicked
+    if (this.isHost) {
+      this._cancelHostPresence = setupHostRoomPresence(this.roomId);
+    }
+
+    // Wire in-game settings + exit buttons
+    document.getElementById('btn-ingame-settings')?.addEventListener('click', () => {
+      import('../menu.js').then(m => m.openModal('settings-modal'));
+    });
+    document.getElementById('btn-ingame-exit')?.addEventListener('click', () => {
+      if (confirm(this.isHost
+        ? 'You are the host. Leaving will DELETE the room for everyone. Exit?'
+        : 'Leave the game?')) {
+        this._handleExit();
+      }
+    });
 
     // Subscribe to Firebase
     this._unsubRoom = watchRoom(this.roomId, snap => this._onRoomUpdate(snap));
@@ -192,7 +211,22 @@ export class GameManager {
 
   // ── Firebase Room Updates ─────────────────────────────────── 
   _onRoomUpdate(room) {
-    if (!room || !this.running) return;
+    if (!this.running) return;
+
+    // Room was deleted → host left, kick everyone back to menu
+    if (!room) {
+      this._gameOver = true;
+      this.destroy();
+      alert('The host left. Returning to menu.');
+      import('../main.js').then(({ appState, showScreen }) => {
+        appState.roomId   = null;
+        appState.isHost   = false;
+        appState.roomData = null;
+        showScreen('menu-screen');
+      });
+      return;
+    }
+
     if (room.status === 'finished' && room.winner) {
       this._showWinner(room.winner);
       return;
@@ -429,11 +463,33 @@ export class GameManager {
     setTimeout(() => toast.classList.remove('show'), 1800);
   }
 
-  // ── Cleanup ───────────────────────────────────────────────── 
+  // ── Exit Game (intentional) ──────────────────────────────────
+  async _handleExit() {
+    // Cancel the onDisconnect room removal BEFORE we delete manually
+    if (this._cancelHostPresence) {
+      try { await this._cancelHostPresence(); } catch { /* ignore */ }
+    }
+    this.destroy();
+    try {
+      if (this.isHost) {
+        await deleteRoom(this.roomId);
+      } else {
+        await removePlayer(this.roomId, this.localPlayerId);
+      }
+    } catch { /* ignore */ }
+    const { appState, showScreen } = await import('../main.js');
+    appState.roomId   = null;
+    appState.isHost   = false;
+    appState.roomData = null;
+    showScreen('menu-screen');
+  }
+
+  // ── Cleanup ─────────────────────────────────────────────────── 
   destroy() {
     this.running = false;
     if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
     if (this._unsubRoom) { this._unsubRoom(); this._unsubRoom = null; }
     if (this._mobileControls) { this._mobileControls.destroy(); this._mobileControls = null; }
+    if (this._cancelHostPresence) { this._cancelHostPresence = null; }
   }
 }

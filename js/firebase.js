@@ -81,6 +81,15 @@ export function setupPresence(roomId, playerId, hostId, isHost) {
   }
 }
 
+// When the host starts a game, register room auto-delete on disconnect
+// so all players are booted if the host loses connection mid-game
+export function setupHostRoomPresence(roomId) {
+  const roomRef = ref(_db, `rooms/${roomId}`);
+  onDisconnect(roomRef).remove();
+  // Return cancel fn so intentional exits can cancel before deleting manually
+  return () => onDisconnect(roomRef).cancel();
+}
+
 // ── Bombs ─────────────────────────────────────────────────────
 export async function placeBomb(roomId, bombData) {
   const r = push(ref(_db, `rooms/${roomId}/bombs`));
