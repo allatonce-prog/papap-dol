@@ -367,6 +367,8 @@
   justify-content: center;
   transition: transform 0.1s, box-shadow 0.1s;
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  touch-action: none;
 }
 #btn-mobile-bomb:active {
   transform: scale(0.9);
@@ -387,6 +389,8 @@
   justify-content: center;
   transition: transform 0.1s;
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  touch-action: none;
 }
 #btn-mobile-detonate:active { transform: scale(0.88); }
 

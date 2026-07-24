@@ -58,24 +58,17 @@ export class MobileControls {
     zone.addEventListener('touchend',    e => this._joyEnd(e),    { passive: false });
     zone.addEventListener('touchcancel', e => this._joyEnd(e),    { passive: false });
 
-    // Bomb button
-    this._bombBtn.addEventListener('touchstart', e => {
+    // Bomb button (Place Bomb)
+    this._bombBtn.addEventListener('pointerdown', e => {
       e.preventDefault();
       this.KEYS['Space'] = true;
-    }, { passive: false });
-    this._bombBtn.addEventListener('touchend', e => {
-      e.preventDefault();
-      // KEYS['Space'] is consumed by Player._tryPlaceBomb → no need to clear here
-    }, { passive: false });
+    });
 
     // Detonate button (Shift)
-    this._detonateBtn.addEventListener('touchstart', e => {
+    this._detonateBtn.addEventListener('pointerdown', e => {
       e.preventDefault();
       this.KEYS['ShiftLeft'] = true;
-    }, { passive: false });
-    this._detonateBtn.addEventListener('touchend', e => {
-      e.preventDefault();
-    }, { passive: false });
+    });
   }
 
   _joyStart(e) {
