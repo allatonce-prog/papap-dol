@@ -501,10 +501,15 @@
 /* Adjust overlay layout on mobile */
 @media (max-width: 700px) {
   #ingame-chat-container {
+    display: none;
     top: 54px;
     width: 180px;
     height: 110px;
     padding: 4px;
+    pointer-events: auto;
+  }
+  #ingame-chat-container.mobile-open {
+    display: flex;
   }
   #ingame-chat-messages {
     font-size: 0.3rem;

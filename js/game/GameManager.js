@@ -139,6 +139,19 @@ export class GameManager {
       btn.onclick = handler;
     });
 
+    // Wire chat toggle button (for mobile/tablet)
+    const toggleBtn = document.getElementById('btn-ingame-chat-toggle');
+    const chatContainer = document.getElementById('ingame-chat-container');
+    if (toggleBtn && chatContainer) {
+      toggleBtn.onclick = (e) => {
+        e.preventDefault();
+        const isOpen = chatContainer.classList.toggle('mobile-open');
+        if (isOpen) {
+          document.getElementById('ingame-chat-input')?.focus();
+        }
+      };
+    }
+
     // In-game Chat handler (Enter to type, Enter to send)
     this._chatKeyHandler = (e) => {
       if (e.code === 'Enter') {
@@ -156,8 +169,10 @@ export class GameManager {
           }
           input.value = '';
           input.blur();
+          if (chatContainer) chatContainer.classList.remove('mobile-open');
         } else {
           e.preventDefault();
+          if (chatContainer) chatContainer.classList.add('mobile-open');
           input.focus();
         }
       }
@@ -168,6 +183,15 @@ export class GameManager {
     const ingameForm = document.getElementById('ingame-chat-form');
     if (ingameForm) {
       ingameForm.onsubmit = (e) => e.preventDefault();
+    }
+
+    const chatInput = document.getElementById('ingame-chat-input');
+    if (chatInput && chatContainer) {
+      chatInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          chatContainer.classList.remove('mobile-open');
+        }, 150);
+      });
     }
 
     // Start watching in-game chat
