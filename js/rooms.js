@@ -221,7 +221,7 @@ function buildPlayerData(colorIndex, ready) {
     py            : 0,
     direction     : 'none',
     speed         : 180,
-    bombCapacity  : 1,
+    bombCapacity  : 3,
     explosionRange: 1,
     shield        : false,
     canKick       : false,

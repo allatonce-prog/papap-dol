@@ -79,7 +79,7 @@ export class GameManager {
         this.localPlayer = new Player(pid, pdata.colorIndex, this);
         // Restore stats if reconnecting
         this.localPlayer.speed          = pdata.speed          ?? 180;
-        this.localPlayer.bombCapacity   = pdata.bombCapacity   ?? 1;
+        this.localPlayer.bombCapacity   = pdata.bombCapacity   ?? 3;
         this.localPlayer.explosionRange = pdata.explosionRange ?? 1;
         this.localPlayer.shield         = pdata.shield         ?? false;
         this.localPlayer.canKick        = pdata.canKick        ?? false;

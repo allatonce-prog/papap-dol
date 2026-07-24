@@ -19,7 +19,7 @@ export class RemotePlayer {
     this.direction      = initialData?.direction ?? 'down';
     this.alive          = initialData?.alive ?? true;
     this.speed          = initialData?.speed ?? 180;
-    this.bombCapacity   = initialData?.bombCapacity ?? 1;
+    this.bombCapacity   = initialData?.bombCapacity ?? 3;
     this.explosionRange = initialData?.explosionRange ?? 1;
     this.shield         = initialData?.shield ?? false;
     this.canKick        = initialData?.canKick ?? false;
