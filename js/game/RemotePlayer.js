@@ -29,6 +29,8 @@ export class RemotePlayer {
     this.nickname       = initialData?.nickname ?? '???';
     this.color          = initialData?.color ?? '#ffffff';
     this.avatar         = initialData?.avatar ?? '🙂';
+    this.emoji          = initialData?.emoji ?? null;
+    this.emojiTime      = initialData?.emojiTime ?? 0;
 
     this._walkFrame = 0;
     this._deathAnim = 0;   // 0 = alive, >0 = dying animation progress
@@ -51,6 +53,8 @@ export class RemotePlayer {
     if (data.remoteDetonator !== undefined)this.remoteDetonator= data.remoteDetonator;
     if (data.canGhost !== undefined)       this.canGhost       = data.canGhost;
     if (data.extraLives !== undefined)     this.extraLives     = data.extraLives;
+    if (data.emoji !== undefined)          this.emoji          = data.emoji;
+    if (data.emojiTime !== undefined)      this.emojiTime      = data.emojiTime;
   }
 
   update(dt) {

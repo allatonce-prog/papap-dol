@@ -92,14 +92,12 @@ export const POWERUP_COLOR = {
 
 // Weighted pool (common items appear more often)
 export const POWERUP_POOL = [
-  'bomb','bomb',
-  'fire','fire','fire',
-  'speed','speed',
-  'shield',
+  'bomb','bomb','bomb',
+  'fire','fire','fire','fire',
+  'speed','speed','speed',
   'kick',
   'remote',
   'ghost',
-  'life',
 ];
 
 // --- Screen IDs ---

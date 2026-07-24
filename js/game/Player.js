@@ -245,6 +245,8 @@ export class Player {
       remoteDetonator: this.remoteDetonator,
       canGhost      : this.canGhost,
       extraLives    : this.extraLives,
+      emoji         : this.emoji || null,
+      emojiTime     : this.emojiTime || 0,
     };
   }
 }

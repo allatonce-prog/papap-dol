@@ -8,6 +8,7 @@ import { Bomb, Explosion, Spark } from './Bomb.js';
 import { PowerUp }      from './PowerUp.js';
 import { Renderer }     from './Renderer.js';
 import { MobileControls } from './MobileControls.js';
+import { BotAI }          from './BotAI.js';
 import {
   TILE_SIZE, CANVAS_W, CANVAS_H,
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
@@ -45,6 +46,7 @@ export class GameManager {
     this.sparks       = [];         // Spark[]
     this.remotePlayers= new Map();  // playerId → RemotePlayer
     this.localPlayer  = null;
+    this.botAIs       = new Map();  // botId → BotAI (host only)
 
     // Game state
     this.running      = false;
@@ -104,10 +106,35 @@ export class GameManager {
       this._mobileControls = new MobileControls(KEYS);
     }
 
-    // Host: auto-delete room on disconnect so all players get kicked
+    // Host: bot setup & auto-delete room on disconnect
     if (this.isHost) {
       this._cancelHostPresence = setupHostRoomPresence(this.roomId);
+      Object.entries(players).forEach(([pid, pdata]) => {
+        if (pid.startsWith('bot_')) {
+          const spawn = SPAWN_POSITIONS[pdata.colorIndex] || SPAWN_POSITIONS[0];
+          const initialData = {
+            ...pdata,
+            px: spawn.x * TILE_SIZE + TILE_SIZE / 2,
+            py: spawn.y * TILE_SIZE + TILE_SIZE / 2
+          };
+          this.botAIs.set(pid, new BotAI(pid, pdata.colorIndex, initialData, this));
+        }
+      });
     }
+
+    // Wire quick emoji chat buttons
+    document.querySelectorAll('#emoji-quick-chat .emoji-btn').forEach(btn => {
+      // Use clean event handler
+      const handler = () => {
+        const emoji = btn.getAttribute('data-emoji');
+        if (this.localPlayer && this.localPlayer.alive) {
+          this.localPlayer.emoji = emoji;
+          this.localPlayer.emojiTime = Date.now();
+          this._syncToFirebase();
+        }
+      };
+      btn.onclick = handler;
+    });
 
     // Wire in-game settings + exit buttons
     document.getElementById('btn-ingame-settings')?.addEventListener('click', () => {
@@ -198,6 +225,28 @@ export class GameManager {
       }
     }
 
+    // Update bot AIs (host only)
+    if (this.isHost && this.botAIs.size > 0) {
+      this.botAIs.forEach((bot, id) => {
+        if (bot.alive) {
+          // Check if bot got hit by any explosion
+          for (const exp of this.explosions) {
+            const bx = Math.floor(bot.px / TILE_SIZE);
+            const by = Math.floor(bot.py / TILE_SIZE);
+            if (exp.containsTile(bx, by)) {
+              bot.alive = false;
+              sfxDeath();
+              updatePlayer(this.roomId, id, { alive: false }).catch(() => {});
+              break;
+            }
+          }
+        }
+        if (bot.alive) {
+          bot.update(dt);
+        }
+      });
+    }
+
     // Check winner (host only writes it)
     if (!this._gameOver) this._checkWinner();
   }
@@ -207,6 +256,15 @@ export class GameManager {
     if (!this.localPlayer) return;
     const data = this.localPlayer.toFirebase();
     updatePlayer(this.roomId, this.localPlayerId, data).catch(() => {});
+
+    // Sync bots to Firebase (host only)
+    if (this.isHost && this.botAIs.size > 0) {
+      this.botAIs.forEach((bot, id) => {
+        if (bot.alive) {
+          updatePlayer(this.roomId, id, bot.toFirebase()).catch(() => {});
+        }
+      });
+    }
   }
 
   // ── Firebase Room Updates ─────────────────────────────────── 

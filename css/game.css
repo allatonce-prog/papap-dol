@@ -247,6 +247,53 @@
   text-shadow: 0 0 40px rgba(255,204,0,0.8);
 }
 
+/* ── EMOJI QUICK CHAT PANEL ──────────────────────────────────── */
+#emoji-quick-chat {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  background: rgba(0,0,0,0.65);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-lg);
+  padding: 6px 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+#emoji-quick-chat .emoji-btn {
+  font-size: 1.3rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  transition: transform var(--tr-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#emoji-quick-chat .emoji-btn:hover {
+  transform: scale(1.25);
+}
+
+#emoji-quick-chat .emoji-btn:active {
+  transform: scale(0.9);
+}
+
+/* Adjust layout on small mobile screens to keep them floating in center */
+@media (max-width: 700px) {
+  #emoji-quick-chat {
+    bottom: 8px;
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  #emoji-quick-chat .emoji-btn {
+    font-size: 1.1rem;
+  }
+}
+
 /* ── MOBILE CONTROLS OVERLAY ─────────────────────────────────── */
 #mobile-controls {
   display: none; /* JS shows it only on touch devices */

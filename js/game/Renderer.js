@@ -298,6 +298,48 @@ export class Renderer {
     ctx.fillText(p.nickname || '', cx + 1, cy - r - 3);
     ctx.fillStyle = color;
     ctx.fillText(p.nickname || '', cx, cy - r - 4);
+
+    // Draw emoji quick chat speech bubble
+    if (p.emoji && p.emojiTime && (Date.now() - p.emojiTime < 2500)) {
+      const bx = cx;
+      const by = cy - r - 26;
+      
+      // Draw speech bubble background
+      ctx.fillStyle = 'rgba(10, 10, 22, 0.85)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(bx - 16, by - 16, 32, 26, 6);
+      } else {
+        ctx.rect(bx - 16, by - 16, 32, 26);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      // Bubble tail pointing down
+      ctx.fillStyle = 'rgba(10, 10, 22, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo(bx - 4, by + 10);
+      ctx.lineTo(bx + 4, by + 10);
+      ctx.lineTo(bx, by + 15);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw tail border
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(bx - 4, by + 10);
+      ctx.lineTo(bx, by + 15);
+      ctx.lineTo(bx + 4, by + 10);
+      ctx.stroke();
+
+      // Draw Emoji
+      ctx.font = '14px Arial, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(p.emoji, bx, by - 3);
+    }
   }
 
   _drawDeadPlayer(ctx, p) {

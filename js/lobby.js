@@ -2,7 +2,7 @@
 //  PAPAP DOL — Lobby Module
 // ============================================================
 import { appState, showScreen } from './main.js';
-import { SCREEN, PLAYER_COLORS, PLAYER_AVATARS, MAPS } from './utils/constants.js';
+import { SCREEN, PLAYER_COLORS, PLAYER_AVATARS, MAPS, TILE_SIZE, SPAWN_POSITIONS } from './utils/constants.js';
 import {
   watchRoom, updateRoom, updatePlayer, removePlayer,
   deleteRoom, setGameStatus,
@@ -189,12 +189,61 @@ window._kickPlayer = async (pid) => {
 async function handleStartGame() {
   if (!appState.isHost) return;
   const room = appState.roomData;
-  const playerCount = Object.keys(room.players || {}).length;
-  if (playerCount < 1) { alert('No players in room!'); return; }
+  const players = room.players || {};
+  const playerList = Object.keys(players);
+  const maxP = room.maxPlayers || 4;
 
-  // Set a new map seed
-  const newSeed = Math.floor(Math.random() * 999999);
-  await updateRoom(appState.roomId, { status: 'countdown', mapSeed: newSeed });
+  const updates = {
+    status: 'countdown',
+    mapSeed: Math.floor(Math.random() * 999999)
+  };
+
+  // If there are fewer players than maxPlayers, fill the remaining slots with bots!
+  const botNames = ['Bot Bob', 'Bot Rob', 'Bot Cob', 'Bot Job'];
+  const botAvatars = ['🤖', '👾', '👽', '💀'];
+  
+  let botCount = 0;
+  for (let i = 0; i < maxP; i++) {
+    const usedColorIndices = new Set(Object.values(players).map(p => p.colorIndex));
+    if (playerList.length + botCount < maxP) {
+      // Find the first free colorIndex
+      let colorIndex = 0;
+      for (let c = 0; c < maxP; c++) {
+        if (!usedColorIndices.has(c)) {
+          colorIndex = c;
+          usedColorIndices.add(c);
+          break;
+        }
+      }
+      
+      const spawn = SPAWN_POSITIONS[colorIndex] || SPAWN_POSITIONS[0];
+      const botId = `bot_${Date.now()}_${colorIndex}`;
+      updates[`players/${botId}`] = {
+        nickname: botNames[colorIndex] || 'Bot',
+        colorIndex: colorIndex,
+        color: PLAYER_COLORS[colorIndex],
+        avatar: botAvatars[colorIndex] || '🤖',
+        alive: true,
+        px: spawn.x * TILE_SIZE + TILE_SIZE / 2,
+        py: spawn.y * TILE_SIZE + TILE_SIZE / 2,
+        direction: 'down',
+        speed: 130, // Bot moves slightly slower
+        bombCapacity: 1,
+        explosionRange: 1,
+        shield: false,
+        canKick: false,
+        remoteDetonator: false,
+        canGhost: false,
+        extraLives: 0,
+        ready: true,
+        isBot: true,
+        joinedAt: Date.now() + colorIndex
+      };
+      botCount++;
+    }
+  }
+
+  await updateRoom(appState.roomId, updates);
 }
 
 // ── Countdown & Game Start ─────────────────────────────────────
@@ -239,16 +288,20 @@ async function handlePlayAgain() {
   if (appState.isHost && appState.roomId) {
     const room = appState.roomData;
     const newSeed = Math.floor(Math.random() * 999999);
-    // Reset all player alive status
+    // Reset all player alive status, and delete bots
     const updates = {};
     const players = room?.players || {};
     Object.keys(players).forEach(pid => {
-      updates[`players/${pid}/alive`] = true;
-      updates[`players/${pid}/ready`] = false;
-      updates[`players/${pid}/bombCapacity`] = 1;
-      updates[`players/${pid}/explosionRange`] = 1;
-      updates[`players/${pid}/speed`] = 180;
-      updates[`players/${pid}/shield`] = false;
+      if (pid.startsWith('bot_')) {
+        updates[`players/${pid}`] = null; // delete bot
+      } else {
+        updates[`players/${pid}/alive`] = true;
+        updates[`players/${pid}/ready`] = false;
+        updates[`players/${pid}/bombCapacity`] = 3; // start with 3
+        updates[`players/${pid}/explosionRange`] = 1;
+        updates[`players/${pid}/speed`] = 180;
+        updates[`players/${pid}/shield`] = false;
+      }
     });
     updates.status = 'waiting';
     updates.winner = null;
