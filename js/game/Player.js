@@ -135,25 +135,60 @@ export class Player {
     return false;
   }
 
+  // Returns the tile {tx, ty} where the bomb should be placed.
+  // Uses Math.floor (the tile the player center is INSIDE), then biases
+  // toward the joystick/movement direction when near a tile boundary.
+  _getBombTile() {
+    // Tile the player's center pixel is inside
+    const baseTx = Math.floor(this.px / TILE_SIZE);
+    const baseTy = Math.floor(this.py / TILE_SIZE);
+
+    // Fraction across the tile (0 = left/top edge, 1 = right/bottom edge)
+    const fracX = (this.px - baseTx * TILE_SIZE) / TILE_SIZE;
+    const fracY = (this.py - baseTy * TILE_SIZE) / TILE_SIZE;
+
+    // Within this fraction from any edge → "between tiles", use direction
+    const EDGE = 0.30;
+
+    let tx = baseTx;
+    let ty = baseTy;
+
+    // Horizontal bias
+    if (fracX < EDGE && (KEYS['ArrowLeft'] || KEYS['KeyA'] || this._lastDx < 0)) {
+      tx = baseTx - 1;
+    } else if (fracX > (1 - EDGE) && (KEYS['ArrowRight'] || KEYS['KeyD'] || this._lastDx > 0)) {
+      tx = baseTx + 1;
+    }
+
+    // Vertical bias
+    if (fracY < EDGE && (KEYS['ArrowUp'] || KEYS['KeyW'] || this._lastDy < 0)) {
+      ty = baseTy - 1;
+    } else if (fracY > (1 - EDGE) && (KEYS['ArrowDown'] || KEYS['KeyS'] || this._lastDy > 0)) {
+      ty = baseTy + 1;
+    }
+
+    return { tx, ty };
+  }
+
   _tryPlaceBomb() {
     if (!KEYS['Space']) return;
     KEYS['Space'] = false; // consume
 
     if (this.bombsActive >= this.bombCapacity) return;
-    const tx = this.tileX;
-    const ty = this.tileY;
+
+    const { tx, ty } = this._getBombTile();
     if (this.game.hasBombAt(tx, ty)) return;
     if (this.map.isWall(tx, ty)) return;
 
     this.bombsActive++;
     const bombData = {
-      owner        : this.playerId,
-      x            : tx,
-      y            : ty,
-      placedAt     : Date.now(),
-      explodeAt    : Date.now() + BOMB_FUSE_MS,
+      owner         : this.playerId,
+      x             : tx,
+      y             : ty,
+      placedAt      : Date.now(),
+      explodeAt     : Date.now() + BOMB_FUSE_MS,
       explosionRange: this.explosionRange,
-      remote       : this.remoteDetonator,
+      remote        : this.remoteDetonator,
     };
 
     // Grace tile so player can walk out
@@ -163,6 +198,7 @@ export class Player {
     sfxBombPlace();
     this.game.onLocalBombPlaced(bombData);
   }
+
 
   _tryRemoteDetonate() {
     if (!this.remoteDetonator) return;
