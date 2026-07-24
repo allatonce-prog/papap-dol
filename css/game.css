@@ -1,0 +1,207 @@
+/* ============================================================
+   PAPAP DOL — Game CSS
+   Canvas wrapper, HUD, in-game overlays
+   ============================================================ */
+
+/* ── GAME SCREEN ─────────────────────────────────────────────── */
+#game-screen {
+  flex-direction: column;
+  gap: 0;
+  background: #000;
+  padding: 0;
+}
+
+.game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 12px;
+}
+
+/* ── CANVAS WRAPPER ─────────────────────────────────────────── */
+.canvas-wrapper {
+  position: relative;
+  border: 2px solid rgba(233,69,96,0.4);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(233,69,96,0.2),
+    0 0 40px rgba(233,69,96,0.3),
+    0 0 80px rgba(233,69,96,0.1);
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── HUD ─────────────────────────────────────────────────────── */
+#game-hud {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 624px;
+}
+
+.hud-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 0.45rem;
+  font-family: var(--font-pixel);
+}
+
+.hud-player.local-player {
+  border-color: rgba(233,69,96,0.5);
+}
+
+.hud-player.eliminated {
+  opacity: 0.35;
+}
+
+.hud-color-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hud-nick {
+  color: var(--text-primary);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+}
+
+.hud-stat-icon { font-size: 0.6rem; }
+
+/* ── ELIMINATION BANNER ─────────────────────────────────────── */
+#elim-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: rgba(0,0,0,0.85);
+  border: 2px solid var(--accent-red);
+  border-radius: var(--radius-md);
+  padding: var(--gap-lg) var(--gap-xl);
+  text-align: center;
+  z-index: 120;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+#elim-banner.show { transform: translate(-50%, -50%) scale(1); }
+
+.elim-text {
+  font-size: var(--font-size-base);
+  color: var(--accent-red);
+  text-shadow: 0 0 20px rgba(233,69,96,0.8);
+}
+
+/* ── SCREEN SHAKE ────────────────────────────────────────────── */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0, 0); }
+  10%       { transform: translate(-6px, -4px); }
+  30%       { transform: translate( 5px,  3px); }
+  50%       { transform: translate(-4px,  5px); }
+  70%       { transform: translate( 4px, -3px); }
+  90%       { transform: translate(-3px,  2px); }
+}
+
+.canvas-wrapper.shake {
+  animation: screenShake 0.3s ease;
+}
+
+/* ── GAME PAUSE OVERLAY ──────────────────────────────────────── */
+#pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+#pause-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.pause-text {
+  font-size: var(--font-size-2xl);
+  color: var(--accent-yellow);
+  text-shadow: 0 0 40px rgba(255,204,0,0.8);
+  animation: logoPulse 1.5s ease-in-out infinite;
+}
+
+/* ── POWER-UP TOAST ──────────────────────────────────────────── */
+.pu-toast {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 140;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.pu-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── GAME OVER OVERLAY (all dead) ──────────────────────────── */
+#draw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-xl);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#draw-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.draw-text {
+  font-size: var(--font-size-2xl);
+  color: var(--accent-yellow);
+  text-shadow: 0 0 40px rgba(255,204,0,0.8);
+}

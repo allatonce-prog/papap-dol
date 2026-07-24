@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papap Dol — Multiplayer Arcade Bomber</title>
+  <meta name="description" content="Fast-paced browser multiplayer arcade game inspired by Bomberman. No login required — just pick a nickname and explode your friends!">
+  <meta property="og:title" content="Papap Dol">
+  <meta property="og:description" content="Multiplayer bomb-blasting arcade action. Play free in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/ui.css">
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ANIMATED BACKGROUND CANVAS                                 -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- NICKNAME SCREEN                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="nickname-screen" class="screen">
+  <div class="glass-panel nickname-modal flex-col gap-md">
+    <h1 class="game-logo">PAPAP DOL</h1>
+    <p class="logo-sub">💣 MULTIPLAYER ARCADE 💣</p>
+    <div class="form-group">
+      <label class="form-label" for="nickname-input">ENTER YOUR NICKNAME</label>
+      <input
+        id="nickname-input"
+        class="neon-input"
+        type="text"
+        maxlength="15"
+        placeholder="Your name (3-15 chars)"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <span id="nickname-error" class="input-error"></span>
+    </div>
+    <button id="btn-nickname-continue" class="btn btn-primary btn-lg w-full">CONTINUE →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MAIN MENU SCREEN                                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="menu-screen" class="screen hidden">
+  <div class="menu-wrapper">
+    <h1 class="menu-title">PAPAP<br>DOL</h1>
+    <p class="menu-tagline">💣 BLAST YOUR WAY TO VICTORY 💣</p>
+    <div class="menu-nickname-badge">Playing as: <span id="menu-nickname-display"></span></div>
+    <nav class="menu-buttons">
+      <button class="menu-btn" id="btn-menu-play">⚡ PLAY</button>
+      <button class="menu-btn" id="btn-menu-settings">⚙️ SETTINGS</button>
+      <button class="menu-btn" id="btn-menu-howto">📖 HOW TO PLAY</button>
+      <button class="menu-btn" id="btn-menu-credits">🏆 CREDITS</button>
+    </nav>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PLAY SCREEN                                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="play-screen" class="screen hidden">
+  <div class="glass-panel play-panel flex-col gap-lg">
+    <h2 class="screen-title">PLAY</h2>
+    <div class="play-options">
+      <button class="play-card" id="btn-create-room">
+        <span class="play-card-icon">🏗️</span>
+        <span class="play-card-label">CREATE<br>ROOM</span>
+      </button>
+      <button class="play-card" id="btn-browse-rooms">
+        <span class="play-card-icon">🔍</span>
+        <span class="play-card-label">BROWSE<br>ROOMS</span>
+      </button>
+    </div>
+    <button class="btn btn-sm w-full" id="btn-play-back">← BACK</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- BROWSE ROOMS SCREEN                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="browse-screen" class="screen hidden">
+  <div class="browse-container">
+    <div class="browse-header">
+      <h2 class="screen-title" style="margin-bottom:0">ROOMS</h2>
+      <input id="room-search" class="neon-input browse-search" type="text" placeholder="🔍 Search rooms..." autocomplete="off">
+      <div class="browse-filters">
+        <label class="toggle-label">Hide Full</label>
+        <label class="toggle">
+          <input type="checkbox" id="filter-hide-full">
+          <span class="toggle-slider"></span>
+        </label>
+        <select id="filter-sort" class="neon-select" style="width:auto;font-size:0.5rem;padding:8px 12px;">
+          <option value="players">Sort: Players</option>
+          <option value="name">Sort: Name</option>
+          <option value="newest">Sort: Newest</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="browse-rooms-list" class="browse-rooms">
+      <div class="browse-empty">
+        <p>💣</p>
+        <p>No rooms available.</p>
+        <p>Create one and invite friends!</p>
+      </div>
+    </div>
+
+    <div class="browse-footer">
+      <button class="btn btn-sm" id="btn-browse-back">← BACK</button>
+      <button class="btn btn-cyan btn-sm" id="btn-browse-refresh">↻ REFRESH</button>
+      <button class="btn btn-primary btn-sm" id="btn-browse-create">+ CREATE ROOM</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CREATE ROOM SCREEN                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="create-screen" class="screen hidden">
+  <div class="glass-panel create-panel flex-col gap-md">
+    <h2 class="screen-title">CREATE ROOM</h2>
+
+    <div class="form-group">
+      <label class="form-label" for="room-name-input">ROOM NAME</label>
+      <input id="room-name-input" class="neon-input" type="text" maxlength="24" placeholder="Leave blank for random name" autocomplete="off">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="room-max-players">MAX PLAYERS</label>
+        <select id="room-max-players" class="neon-select">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="room-map">MAP</label>
+        <select id="room-map" class="neon-select">
+          <option value="Classic">Classic</option>
+          <option value="Ice">Ice</option>
+          <option value="Desert">Desert</option>
+          <option value="Volcano">Volcano</option>
+          <option value="Factory">Factory</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">PRIVATE ROOM</span>
+      <label class="toggle">
+        <input type="checkbox" id="room-private">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="form-group" id="room-password-group" style="display:none">
+      <label class="form-label" for="room-password">PASSWORD (OPTIONAL)</label>
+      <input id="room-password" class="neon-input" type="password" maxlength="20" placeholder="Room password..." autocomplete="off">
+    </div>
+
+    <div style="display:flex;gap:var(--gap-md);margin-top:var(--gap-md)">
+      <button class="btn btn-sm" id="btn-create-back" style="flex:1">← BACK</button>
+      <button class="btn btn-primary" id="btn-create-confirm" style="flex:2">CREATE →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- LOBBY SCREEN                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="lobby-screen" class="screen hidden">
+  <div class="lobby-container">
+    <div class="lobby-header">
+      <div>
+        <h2 class="lobby-room-name" id="lobby-room-name">Room Name</h2>
+        <p class="lobby-map-badge" id="lobby-map-badge">🗺️ Classic</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="lobby-room-code" class="lobby-map-badge" style="cursor:pointer" title="Click to copy room code">📋 CODE</span>
+        <button class="btn btn-sm" id="btn-lobby-leave">← LEAVE</button>
+      </div>
+    </div>
+
+    <div class="lobby-players" id="lobby-players-grid">
+      <!-- Populated by lobby.js -->
+    </div>
+
+    <div class="lobby-controls" id="lobby-controls">
+      <!-- Host controls or ready button populated by lobby.js -->
+    </div>
+
+    <p class="lobby-hint" id="lobby-hint">Waiting for players to get ready...</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- GAME SCREEN                                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="game-screen" class="screen hidden">
+  <div class="game-area">
+    <div id="game-hud"></div>
+    <div class="canvas-wrapper" id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- WINNER SCREEN                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="winner-screen" class="screen hidden">
+  <canvas class="winner-confetti" id="confetti-canvas"></canvas>
+  <div style="text-align:center;z-index:1;display:flex;flex-direction:column;align-items:center;gap:var(--gap-lg)">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-label">WINNER!</div>
+    <div class="winner-name" id="winner-name-display"></div>
+    <div class="winner-congrats">CONGRATULATIONS!</div>
+    <div class="winner-buttons">
+      <button class="btn btn-primary" id="btn-winner-again">⚡ PLAY AGAIN</button>
+      <button class="btn" id="btn-winner-lobby">🏠 LOBBY</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- COUNTDOWN OVERLAY                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="countdown-overlay">
+  <div id="countdown-display"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ELIMINATION BANNER                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="elim-banner">
+  <div class="elim-text" id="elim-text">💥 YOU WERE ELIMINATED!</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- POWER-UP TOAST                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="pu-toast" id="pu-toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SETTINGS MODAL                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="glass-panel modal-box flex-col gap-md">
+    <h2 class="modal-title">⚙️ SETTINGS</h2>
+
+    <div class="settings-row">
+      <span class="settings-label">MUSIC</span>
+      <div class="range-wrap">
+        <span class="toggle-label">🎵</span>
+        <input type="range" id="setting-music" min="0" max="1" step="0.05" value="0.7">
+      </div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">SFX</span>
+      <div class="range-wrap">
+        <span class="toggle-label">🔊</span>
+        <input type="range" id="setting-sfx" min="0" max="1" step="0.05" value="0.8">
+      </div>
+    </div>
+    <div class="toggle-row">
+      <span class="settings-label">MUTE ALL</span>
+      <label class="toggle">
+        <input type="checkbox" id="setting-mute">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">NICKNAME</span>
+      <button class="btn btn-sm" id="btn-change-nickname">CHANGE</button>
+    </div>
+
+    <button class="btn btn-primary w-full mt-md" id="btn-settings-close">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- HOW TO PLAY MODAL                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="howto-modal">
+  <div class="glass-panel modal-box flex-col gap-md">
+    <h2 class="modal-title">📖 HOW TO PLAY</h2>
+    <div class="howto-content">
+      <div class="howto-section">
+        <h3>MOVEMENT</h3>
+        <p><span class="key">W</span> Up &nbsp; <span class="key">S</span> Down &nbsp; <span class="key">A</span> Left &nbsp; <span class="key">D</span> Right</p>
+      </div>
+      <div class="howto-section">
+        <h3>ACTIONS</h3>
+        <p><span class="key">SPACE</span> Place Bomb</p>
+        <p><span class="key">SHIFT</span> Remote Detonate (if owned)</p>
+      </div>
+      <div class="howto-section">
+        <h3>OBJECTIVE</h3>
+        <p>Be the last player standing. Destroy crates to find power-ups. Use bombs strategically!</p>
+      </div>
+      <div class="howto-section">
+        <h3>POWER-UPS</h3>
+        <ul class="powerup-list">
+          <li><span>💣</span><span>Extra Bomb — More bombs at once</span></li>
+          <li><span>🔥</span><span>Fire Up — Longer explosion range</span></li>
+          <li><span>⚡</span><span>Speed Up — Move faster</span></li>
+          <li><span>🛡️</span><span>Shield — Survive one explosion</span></li>
+          <li><span>🦵</span><span>Bomb Kick — Kick bombs away</span></li>
+          <li><span>⏰</span><span>Remote Bomb — Manual detonation</span></li>
+          <li><span>👻</span><span>Ghost — Walk through crates</span></li>
+          <li><span>❤️</span><span>Extra Life — Revive once</span></li>
+        </ul>
+      </div>
+    </div>
+    <button class="btn btn-primary w-full" id="btn-howto-close">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CREDITS MODAL                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="credits-modal">
+  <div class="glass-panel modal-box flex-col gap-md text-center">
+    <h2 class="modal-title">🏆 CREDITS</h2>
+    <div class="howto-content text-center" style="line-height:3">
+      <p style="color:var(--accent-cyan)">PAPAP DOL</p>
+      <p>Inspired by Bomberman</p>
+      <p style="color:var(--text-muted)">Built with HTML5 Canvas</p>
+      <p style="color:var(--text-muted)">Firebase Realtime Database</p>
+      <p style="color:var(--text-muted)">Vanilla JavaScript</p>
+      <p style="color:var(--accent-yellow);margin-top:16px">Font: Press Start 2P</p>
+      <p style="color:var(--text-muted)">by Google Fonts</p>
+    </div>
+    <button class="btn btn-primary w-full" id="btn-credits-close">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PASSWORD MODAL                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="password-modal">
+  <div class="glass-panel modal-box flex-col gap-md">
+    <h2 class="modal-title">🔒 PRIVATE ROOM</h2>
+    <div class="form-group">
+      <label class="form-label">ENTER PASSWORD</label>
+      <input id="join-password-input" class="neon-input" type="password" placeholder="Password..." autocomplete="off">
+      <span id="join-password-error" class="input-error"></span>
+    </div>
+    <div style="display:flex;gap:var(--gap-md)">
+      <button class="btn btn-sm" id="btn-pw-cancel" style="flex:1">CANCEL</button>
+      <button class="btn btn-primary" id="btn-pw-confirm" style="flex:2">JOIN →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MAIN JS (ES6 module)                                       -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

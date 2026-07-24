@@ -1,0 +1,356 @@
+// ============================================================
+//  PAPAP DOL — Canvas Renderer
+// ============================================================
+import {
+  TILE_SIZE, GRID_W, GRID_H, CANVAS_W, CANVAS_H,
+  TILE_EMPTY, TILE_WALL, TILE_CRATE,
+  PLAYER_COLORS, PLAYER_DARK,
+} from '../utils/constants.js';
+
+export class Renderer {
+  constructor(canvas, gameManager) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext('2d');
+    this.game   = gameManager;
+    this.theme  = gameManager.map.theme.colors;
+    canvas.width  = CANVAS_W;
+    canvas.height = CANVAS_H;
+  }
+
+  // ── Main render ─────────────────────────────────────────────
+  render() {
+    const ctx = this.ctx;
+    const { game, theme } = this;
+    const now = performance.now();
+
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    this._drawMap(ctx, theme, game.map);
+    this._drawPowerUps(ctx, game.powerUps, now);
+    this._drawBombs(ctx, game.bombs, theme);
+    this._drawExplosions(ctx, game.explosions);
+    this._drawSparks(ctx, game.sparks);
+    this._drawPlayers(ctx, game, now);
+  }
+
+  // ── Map ──────────────────────────────────────────────────────
+  _drawMap(ctx, theme, map) {
+    for (let y = 0; y < GRID_H; y++) {
+      for (let x = 0; x < GRID_W; x++) {
+        const px = x * TILE_SIZE;
+        const py = y * TILE_SIZE;
+        const tile = map.getTile(x, y);
+
+        if (tile === TILE_WALL) {
+          this._drawWall(ctx, px, py, theme);
+        } else if (tile === TILE_CRATE) {
+          this._drawCrate(ctx, px, py, theme);
+        } else {
+          // Floor – checker pattern
+          const alt = (x + y) % 2 === 0;
+          ctx.fillStyle = alt ? theme.floor : theme.floorAlt;
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        }
+      }
+    }
+  }
+
+  _drawWall(ctx, px, py, theme) {
+    const T = TILE_SIZE;
+    ctx.fillStyle = theme.wall;
+    ctx.fillRect(px, py, T, T);
+    // Highlight (top-left bevels)
+    ctx.fillStyle = theme.wallHighlight;
+    ctx.fillRect(px, py, T, 3);
+    ctx.fillRect(px, py, 3, T);
+    // Shadow (bottom-right)
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(px, py + T - 3, T, 3);
+    ctx.fillRect(px + T - 3, py, 3, T);
+    // Inner accent
+    ctx.fillStyle = theme.wallAccent;
+    ctx.fillRect(px + 4, py + 4, T - 8, T - 8);
+  }
+
+  _drawCrate(ctx, px, py, theme) {
+    const T = TILE_SIZE;
+    ctx.fillStyle = theme.crate;
+    ctx.fillRect(px + 1, py + 1, T - 2, T - 2);
+    // Wood grain lines
+    ctx.strokeStyle = theme.crateLight;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + 6, py + 2);  ctx.lineTo(px + 6, py + T - 2);
+    ctx.moveTo(px + 14, py + 2); ctx.lineTo(px + 14, py + T - 2);
+    ctx.moveTo(px + T - 14, py + 2); ctx.lineTo(px + T - 14, py + T - 2);
+    ctx.moveTo(px + T - 6, py + 2);  ctx.lineTo(px + T - 6, py + T - 2);
+    ctx.stroke();
+    // Border
+    ctx.strokeStyle = theme.crateAccent;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px + 1, py + 1, T - 2, T - 2);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(px + 1, py + 1, T - 2, 4);
+  }
+
+  // ── Power-Ups ─────────────────────────────────────────────── 
+  _drawPowerUps(ctx, powerUps, now) {
+    for (const pu of powerUps.values()) {
+      const bob = pu.bobOffset(now);
+      const cx  = pu.px;
+      const cy  = pu.py + bob;
+      const r   = TILE_SIZE * 0.38;
+
+      // Glow
+      ctx.save();
+      ctx.globalAlpha = 0.35 + 0.15 * Math.sin(now / 400);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.6);
+      grad.addColorStop(0, pu.color);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Background circle
+      ctx.fillStyle = pu.color + '33';
+      ctx.strokeStyle = pu.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Emoji
+      ctx.font = `${TILE_SIZE * 0.5}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(pu.emoji, cx, cy);
+    }
+  }
+
+  // ── Bombs ─────────────────────────────────────────────────── 
+  _drawBombs(ctx, bombs, theme) {
+    for (const bomb of bombs.values()) {
+      const cx = bomb.px;
+      const cy = bomb.py;
+      const r  = bomb.drawRadius;
+      const t  = bomb.fuseProgress;
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.ellipse(cx, cy + r + 4, r * 0.7, r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Bomb body
+      ctx.fillStyle = '#222';
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Shine
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath(); ctx.arc(cx - r*0.2, cy - r*0.3, r*0.25, 0, Math.PI*2); ctx.fill();
+
+      // Fuse
+      ctx.strokeStyle = '#aa8800';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.quadraticCurveTo(cx + r * 0.4, cy - r * 1.4, cx + r * 0.2, cy - r * 1.8);
+      ctx.stroke();
+
+      // Spark (blinking near end)
+      if (t > 0.5 || Math.floor(Date.now() / 200) % 2 === 0) {
+        const sparkAlpha = 0.8 + 0.2 * Math.sin(Date.now() / 50);
+        ctx.fillStyle = `rgba(255,200,0,${sparkAlpha})`;
+        ctx.beginPath(); ctx.arc(cx + r * 0.2, cy - r * 1.8, 4, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Fuse ring (shows countdown)
+      ctx.strokeStyle = t > 0.7 ? '#ff3300' : t > 0.4 ? '#ff9900' : '#ffcc00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 4, -Math.PI/2, -Math.PI/2 + (1 - t) * Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // ── Explosions ───────────────────────────────────────────────
+  _drawExplosions(ctx, explosions) {
+    for (const exp of explosions) {
+      const a = exp.alpha;
+      ctx.save();
+      ctx.globalAlpha = a;
+
+      for (const cell of exp.cells) {
+        const px = cell.x * TILE_SIZE;
+        const py = cell.y * TILE_SIZE;
+        const T  = TILE_SIZE;
+
+        if (cell.isCenter) {
+          // Bright center
+          const grad = ctx.createRadialGradient(px+T/2, py+T/2, 0, px+T/2, py+T/2, T/2);
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.3, '#ffdd00');
+          grad.addColorStop(0.7, '#ff6600');
+          grad.addColorStop(1, '#ff2200');
+          ctx.fillStyle = grad;
+        } else {
+          const t = exp.progress;
+          const r = Math.round(255);
+          const g = Math.round(120 - t * 80);
+          ctx.fillStyle = `rgb(${r},${g},0)`;
+        }
+        ctx.fillRect(px + 1, py + 1, T - 2, T - 2);
+
+        // Inner glow
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fillRect(px + T*0.1, py + T*0.1, T*0.8, T*0.8);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // ── Sparks ───────────────────────────────────────────────────
+  _drawSparks(ctx, sparks) {
+    for (const s of sparks) {
+      ctx.save();
+      ctx.globalAlpha = s.life;
+      ctx.fillStyle   = s.color;
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur  = 6;
+      ctx.beginPath();
+      ctx.arc(s.px, s.py, s.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ── Players ──────────────────────────────────────────────────
+  _drawPlayers(ctx, game, now) {
+    const allPlayers = [
+      ...game.remotePlayers.values(),
+      game.localPlayer,
+    ].filter(Boolean);
+
+    for (const p of allPlayers) {
+      if (!p.alive) {
+        this._drawDeadPlayer(ctx, p);
+        continue;
+      }
+      this._drawPlayer(ctx, p, p.playerId === game.localPlayerId, now);
+    }
+  }
+
+  _drawPlayer(ctx, p, isLocal, now) {
+    const cx = p.px;
+    const cy = p.py;
+    const T  = TILE_SIZE;
+    const r  = T * 0.38;
+    const color = PLAYER_COLORS[p.colorIndex] || '#ffffff';
+    const dark  = PLAYER_DARK[p.colorIndex]   || '#444444';
+
+    // Bobbing shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + r + 6, r * 0.7, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Shield glow
+    if (p.shield) {
+      ctx.save();
+      ctx.globalAlpha = 0.5 + 0.2 * Math.sin(now / 200);
+      ctx.strokeStyle = '#8866ff';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#8866ff';
+      ctx.shadowBlur = 15;
+      ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+
+    // Local player indicator (small ring)
+    if (isLocal) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Body
+    ctx.fillStyle = color;
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // Face highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.arc(cx - r*0.25, cy - r*0.25, r*0.35, 0, Math.PI*2); ctx.fill();
+
+    // Eyes
+    const eyeOff = this._eyeOffset(p.direction);
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(cx + eyeOff.lx, cy + eyeOff.ly, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeOff.rx, cy + eyeOff.ry, 3, 0, Math.PI*2); ctx.fill();
+
+    // Nickname
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#000';
+    ctx.fillText(p.nickname || '', cx + 1, cy - r - 3);
+    ctx.fillStyle = color;
+    ctx.fillText(p.nickname || '', cx, cy - r - 4);
+  }
+
+  _drawDeadPlayer(ctx, p) {
+    const cx = p.px;
+    const cy = p.py;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.font = `${TILE_SIZE * 0.6}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💀', cx, cy);
+    ctx.restore();
+  }
+
+  _eyeOffset(dir) {
+    switch (dir) {
+      case 'up'   : return { lx: -5, ly: -5, rx:  5, ry: -5 };
+      case 'down' : return { lx: -5, ly:  3, rx:  5, ry:  3 };
+      case 'left' : return { lx: -5, ly: -2, rx:  0, ry: -2 };
+      case 'right': return { lx:  0, ly: -2, rx:  5, ry: -2 };
+      default     : return { lx: -5, ly:  0, rx:  5, ry:  0 };
+    }
+  }
+
+  // ── HUD ──────────────────────────────────────────────────────
+  updateHUD(localPlayer, remotePlayers, localPlayerId) {
+    const hud = document.getElementById('game-hud');
+    if (!hud) return;
+
+    const all = [];
+    remotePlayers.forEach((p, id) => all.push({ p, isLocal: false }));
+    if (localPlayer) all.push({ p: localPlayer, isLocal: true });
+    all.sort((a,b) => a.p.colorIndex - b.p.colorIndex);
+
+    hud.innerHTML = all.map(({ p, isLocal }) => `
+      <div class="hud-player${isLocal ? ' local-player' : ''}${!p.alive ? ' eliminated' : ''}"
+           style="border-color:${p.alive ? PLAYER_COLORS[p.colorIndex]+'44' : 'transparent'}">
+        <div class="hud-color-swatch" style="background:${PLAYER_COLORS[p.colorIndex]}"></div>
+        <span class="hud-nick" style="color:${PLAYER_COLORS[p.colorIndex]}">${esc(p.nickname || '?')}</span>
+        ${p.alive ? `
+          <span class="hud-stat"><span class="hud-stat-icon">💣</span>${p.bombCapacity}</span>
+          <span class="hud-stat"><span class="hud-stat-icon">🔥</span>${p.explosionRange}</span>
+          ${p.shield ? '<span class="hud-stat">🛡️</span>' : ''}
+          ${p.remoteDetonator ? '<span class="hud-stat">⏰</span>' : ''}
+          ${p.canKick ? '<span class="hud-stat">🦵</span>' : ''}
+          ${p.canGhost ? '<span class="hud-stat">👻</span>' : ''}
+          ${p.extraLives > 0 ? `<span class="hud-stat">❤️${p.extraLives}</span>` : ''}
+        ` : '<span style="color:var(--accent-red);font-size:0.5rem">ELIMINATED</span>'}
+      </div>
+    `).join('');
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+}
