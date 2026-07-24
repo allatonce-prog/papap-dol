@@ -89,10 +89,29 @@ export class Player {
       const newPx = this.px + dx * spd * dt;
       const newPy = this.py + dy * spd * dt;
 
-      // X movement
-      if (!this._checkCollision(newPx, this.py)) this.px = newPx;
-      // Y movement
-      if (!this._checkCollision(this.px, newPy)) this.py = newPy;
+      // X movement with vertical corner-sliding auto-alignment
+      if (!this._checkCollision(newPx, this.py)) {
+        this.px = newPx;
+      } else if (dy === 0) {
+        const fracY = (this.py % TILE_SIZE) / TILE_SIZE;
+        if (fracY < 0.35) {
+          if (!this._checkCollision(this.px, this.py - spd * dt)) this.py -= spd * dt;
+        } else if (fracY > 0.65) {
+          if (!this._checkCollision(this.px, this.py + spd * dt)) this.py += spd * dt;
+        }
+      }
+
+      // Y movement with horizontal corner-sliding auto-alignment
+      if (!this._checkCollision(this.px, newPy)) {
+        this.py = newPy;
+      } else if (dx === 0) {
+        const fracX = (this.px % TILE_SIZE) / TILE_SIZE;
+        if (fracX < 0.35) {
+          if (!this._checkCollision(this.px - spd * dt, this.py)) this.px -= spd * dt;
+        } else if (fracX > 0.65) {
+          if (!this._checkCollision(this.px + spd * dt, this.py)) this.px += spd * dt;
+        }
+      }
 
       this._walkFrame += dt * 8;
     }

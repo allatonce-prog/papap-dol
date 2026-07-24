@@ -342,6 +342,7 @@ export class GameManager {
     });
     // Remove bombs no longer in DB
     this.bombs.forEach((bomb, id) => {
+      if (id.startsWith('temp_')) return;
       if (!fbBombs[id]) {
         if (bomb.owner === this.localPlayerId && this.localPlayer) {
           this.localPlayer.onBombExploded(id);
@@ -369,12 +370,23 @@ export class GameManager {
 
   // ── Bomb Placement (local player) ────────────────────────── 
   onLocalBombPlaced(bombData) {
+    const tempId = `temp_${Date.now()}`;
+    const tempBomb = new Bomb(tempId, bombData, this.map);
+    this.bombs.set(tempId, tempBomb);
+
     fbPlaceBomb(this.roomId, bombData).then(id => {
+      this.bombs.delete(tempId);
       if (id) {
         const bomb = new Bomb(id, bombData, this.map);
         this.bombs.set(id, bomb);
       }
-    }).catch(err => console.error('Bomb place err:', err));
+    }).catch(err => {
+      console.error('Bomb place err:', err);
+      this.bombs.delete(tempId);
+      if (this.localPlayer) {
+        this.localPlayer.onBombExploded(null);
+      }
+    });
   }
 
   hasBombAt(tx, ty) {
