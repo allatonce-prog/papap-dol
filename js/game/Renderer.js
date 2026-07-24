@@ -31,6 +31,7 @@ export class Renderer {
     this._drawExplosions(ctx, game.explosions);
     this._drawSparks(ctx, game.sparks);
     this._drawPlayers(ctx, game, now);
+    this._drawWeatherOverlays(ctx, game, now);
   }
 
   // ── Map ──────────────────────────────────────────────────────
@@ -134,6 +135,29 @@ export class Renderer {
       const cy = bomb.py;
       const r  = bomb.drawRadius;
       const t  = bomb.fuseProgress;
+
+      // Volcano Lava geyser bubbles
+      if (bomb.owner === 'volcano') {
+        ctx.fillStyle = 'rgba(255, 68, 0, 0.45)';
+        ctx.beginPath(); ctx.arc(cx, cy, r * 1.3, 0, Math.PI * 2); ctx.fill();
+
+        const pulseRadius = r * (0.8 + 0.35 * Math.sin(Date.now() / 150));
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulseRadius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, '#ffaa00');
+        grad.addColorStop(0.7, '#ff3300');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(cx, cy, pulseRadius, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#ffcc00';
+        for (let i = 0; i < 3; i++) {
+          const bx = cx + Math.sin(Date.now()/200 + i*2) * r * 0.6;
+          const by = cy + Math.cos(Date.now()/250 + i*3) * r * 0.6;
+          ctx.beginPath(); ctx.arc(bx, by, 2, 0, Math.PI*2); ctx.fill();
+        }
+        continue;
+      }
 
       // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -361,6 +385,34 @@ export class Renderer {
       case 'left' : return { lx: -5, ly: -2, rx:  0, ry: -2 };
       case 'right': return { lx:  0, ly: -2, rx:  5, ry: -2 };
       default     : return { lx: -5, ly:  0, rx:  5, ry:  0 };
+    }
+  }
+
+  _drawWeatherOverlays(ctx, game, now) {
+    if (game.map.name === 'Desert') {
+      const cycleTime = 16000;
+      const stormDuration = 4000;
+      const inCycle = (Date.now()) % cycleTime;
+      if (inCycle < stormDuration) {
+        // Sandstorm warning / storm active
+        const progress = inCycle / stormDuration;
+        // Fade wind in and out smoothly
+        const alpha = Math.min(0.2, 0.45 * Math.sin(progress * Math.PI));
+        ctx.fillStyle = `rgba(210, 180, 140, ${alpha})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // Sweeping wind lines
+        ctx.strokeStyle = `rgba(240, 220, 180, ${alpha * 1.5})`;
+        ctx.lineWidth = 2;
+        const windProgress = (Date.now() / 800) % 1.0;
+        for (let i = -CANVAS_W; i < CANVAS_W; i += 60) {
+          ctx.beginPath();
+          const startX = i + windProgress * 60;
+          ctx.moveTo(startX, 0);
+          ctx.lineTo(startX + 120, CANVAS_H);
+          ctx.stroke();
+        }
+      }
     }
   }
 

@@ -14,6 +14,7 @@ import {
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
   POWERUP_POOL, POWERUP_SPAWN_CHANCE,
   PLAYER_COLORS, PLAYER_AVATARS, PLAYER_DARK,
+  GRID_W, GRID_H, TILE_EMPTY,
 } from '../utils/constants.js';
 import {
   watchRoom, updatePlayer, placeBomb as fbPlaceBomb,
@@ -66,6 +67,8 @@ export class GameManager {
 
     this._unsubChat = null;
     this._chatKeyHandler = null;
+    this._lavaGeyserTimer = 0;
+    this._sandstormTimer = 0;
   }
 
   // ── Start ─────────────────────────────────────────────────── 
@@ -189,6 +192,31 @@ export class GameManager {
 
   // ── Update ─────────────────────────────────────────────────── 
   _update(dt, now) {
+    // Desert Sandstorm Push
+    if (this.map.name === 'Desert') {
+      this._sandstormTimer += dt;
+      const cycleTime = 16;
+      const stormDuration = 4;
+      const inCycle = this._sandstormTimer % cycleTime;
+      if (inCycle < stormDuration) {
+        if (this.localPlayer?.alive) {
+          const pushX = 24 * dt;
+          if (!this.localPlayer._checkCollision(this.localPlayer.px + pushX, this.localPlayer.py)) {
+            this.localPlayer.px += pushX;
+          }
+        }
+      }
+    }
+
+    // Volcano Lava Geysers (Host only)
+    if (this.isHost && this.map.name === 'Volcano') {
+      this._lavaGeyserTimer += dt;
+      if (this._lavaGeyserTimer > 8.0) {
+        this._lavaGeyserTimer = 0;
+        this._spawnLavaGeyser();
+      }
+    }
+
     // Local player
     if (this.localPlayer?.alive) {
       this.localPlayer.update(dt);
@@ -650,5 +678,31 @@ export class GameManager {
     if (this._unsubRoom) { this._unsubRoom(); this._unsubRoom = null; }
     if (this._mobileControls) { this._mobileControls.destroy(); this._mobileControls = null; }
     if (this._cancelHostPresence) { this._cancelHostPresence = null; }
+  }
+
+  _spawnLavaGeyser() {
+    const emptyTiles = [];
+    for (let y = 1; y < GRID_H - 1; y++) {
+      for (let x = 1; x < GRID_W - 1; x++) {
+        if (this.map.getTile(x, y) === TILE_EMPTY && !this.hasBombAt(x, y)) {
+          emptyTiles.push({ x, y });
+        }
+      }
+    }
+
+    if (emptyTiles.length === 0) return;
+
+    const choice = emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+    const lavaData = {
+      owner: 'volcano',
+      x: choice.x,
+      y: choice.y,
+      placedAt: Date.now(),
+      explodeAt: Date.now() + 1500, // explodes in 1.5 seconds!
+      explosionRange: 1,
+      remote: false
+    };
+
+    fbPlaceBomb(this.roomId, lavaData).catch(() => {});
   }
 }

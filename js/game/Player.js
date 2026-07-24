@@ -56,6 +56,8 @@ export class Player {
     this._walkFrame   = 0;
     this._lastDx      = 0;
     this._lastDy      = 0;
+    this.vx           = 0;
+    this.vy           = 0;
 
     // Grace tile set (tiles where player walked through their own bomb initially)
     this._graceTiles  = new Set();
@@ -79,37 +81,77 @@ export class Player {
     this._lastDx = dx;
     this._lastDy = dy;
 
-    if (dx !== 0 || dy !== 0) {
-      if (dx === -1) this.direction = 'left';
-      else if (dx === 1) this.direction = 'right';
-      else if (dy === -1) this.direction = 'up';
-      else if (dy === 1) this.direction = 'down';
+    const isIce = this.game.map.name === 'Ice';
+    const spd = this.speed;
 
-      const spd = this.speed;
-      const newPx = this.px + dx * spd * dt;
-      const newPy = this.py + dy * spd * dt;
+    if (isIce) {
+      if (dx !== 0 || dy !== 0) {
+        const accel = 900; // smooth ice acceleration
+        this.vx += dx * accel * dt;
+        this.vy += dy * accel * dt;
+        const curSpd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        if (curSpd > spd) {
+          this.vx = (this.vx / curSpd) * spd;
+          this.vy = (this.vy / curSpd) * spd;
+        }
+
+        if (dx === -1) this.direction = 'left';
+        else if (dx === 1) this.direction = 'right';
+        else if (dy === -1) this.direction = 'up';
+        else if (dy === 1) this.direction = 'down';
+      } else {
+        const friction = 4.0; // smooth ice decay
+        this.vx -= this.vx * friction * dt;
+        this.vy -= this.vy * friction * dt;
+        if (Math.abs(this.vx) < 15) this.vx = 0;
+        if (Math.abs(this.vy) < 15) this.vy = 0;
+      }
+    } else {
+      // Normal map: instant start, instant stop
+      this.vx = dx * spd;
+      this.vy = dy * spd;
+      if (dx !== 0 || dy !== 0) {
+        if (dx === -1) this.direction = 'left';
+        else if (dx === 1) this.direction = 'right';
+        else if (dy === -1) this.direction = 'up';
+        else if (dy === 1) this.direction = 'down';
+      }
+    }
+
+    const moveX = this.vx * dt;
+    const moveY = this.vy * dt;
+
+    if (moveX !== 0 || moveY !== 0) {
+      const newPx = this.px + moveX;
+      const newPy = this.py + moveY;
 
       // X movement with vertical corner-sliding auto-alignment
       if (!this._checkCollision(newPx, this.py)) {
         this.px = newPx;
-      } else if (dy === 0) {
-        const fracY = (this.py % TILE_SIZE) / TILE_SIZE;
-        if (fracY < 0.35) {
-          if (!this._checkCollision(this.px, this.py - spd * dt)) this.py -= spd * dt;
-        } else if (fracY > 0.65) {
-          if (!this._checkCollision(this.px, this.py + spd * dt)) this.py += spd * dt;
+      } else {
+        this.vx = 0; // stop sliding if hit obstacle
+        if (dy === 0) {
+          const fracY = (this.py % TILE_SIZE) / TILE_SIZE;
+          if (fracY < 0.35) {
+            if (!this._checkCollision(this.px, this.py - spd * dt)) this.py -= spd * dt;
+          } else if (fracY > 0.65) {
+            if (!this._checkCollision(this.px, this.py + spd * dt)) this.py += spd * dt;
+          }
         }
       }
 
       // Y movement with horizontal corner-sliding auto-alignment
       if (!this._checkCollision(this.px, newPy)) {
         this.py = newPy;
-      } else if (dx === 0) {
-        const fracX = (this.px % TILE_SIZE) / TILE_SIZE;
-        if (fracX < 0.35) {
-          if (!this._checkCollision(this.px - spd * dt, this.py)) this.px -= spd * dt;
-        } else if (fracX > 0.65) {
-          if (!this._checkCollision(this.px + spd * dt, this.py)) this.px += spd * dt;
+      } else {
+        this.vy = 0; // stop sliding if hit obstacle
+        if (dx === 0) {
+          const fracX = (this.px % TILE_SIZE) / TILE_SIZE;
+          if (fracX < 0.35) {
+            if (!this._checkCollision(this.px - spd * dt, this.py)) this.px -= spd * dt;
+          } else if (fracX > 0.65) {
+            if (!this._checkCollision(this.px + spd * dt, this.py)) this.px += spd * dt;
+          }
         }
       }
 
