@@ -324,8 +324,13 @@ export class GameManager {
       }
     });
     // Remove bombs no longer in DB
-    this.bombs.forEach((_, id) => {
-      if (!fbBombs[id]) this.bombs.delete(id);
+    this.bombs.forEach((bomb, id) => {
+      if (!fbBombs[id]) {
+        if (bomb.owner === this.localPlayerId && this.localPlayer) {
+          this.localPlayer.onBombExploded(id);
+        }
+        this.bombs.delete(id);
+      }
     });
 
     // Sync power-ups
