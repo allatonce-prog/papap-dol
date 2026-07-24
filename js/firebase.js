@@ -5,7 +5,7 @@ import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.12.5/fir
 import {
   getDatabase, ref, set, get, update, push,
   onValue, remove, off, onDisconnect, serverTimestamp,
-  query, orderByChild, equalTo,
+  query, orderByChild, equalTo, limitToLast,
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 import { firebaseConfig } from '../firebase-config.js';
 
@@ -127,4 +127,20 @@ export async function setWinner(roomId, nickname) {
 
 export async function setGameStatus(roomId, status) {
   await update(ref(_db, `rooms/${roomId}`), { status });
+}
+
+// ── Chat ──────────────────────────────────────────────────────
+export async function sendChatMessage(roomId, msgData) {
+  const r = push(ref(_db, `rooms/${roomId}/chat`));
+  await set(r, {
+    ...msgData,
+    timestamp: Date.now(),
+  });
+}
+
+export function watchChat(roomId, cb) {
+  // Query only last 35 messages to keep lobby chat fast and lightweight
+  const q = query(ref(_db, `rooms/${roomId}/chat`), limitToLast(35));
+  onValue(q, snap => cb(snap.val() || {}));
+  return () => off(q);
 }

@@ -198,8 +198,17 @@
       </div>
     </div>
 
-    <div class="lobby-players" id="lobby-players-grid">
-      <!-- Populated by lobby.js -->
+    <div class="lobby-content-layout">
+      <div class="lobby-players" id="lobby-players-grid">
+        <!-- Populated by lobby.js -->
+      </div>
+      <div class="lobby-chat-wrapper glass-panel">
+        <div class="lobby-chat-messages" id="lobby-chat-messages"></div>
+        <form class="lobby-chat-input-row" id="lobby-chat-form" onsubmit="return false;">
+          <input class="neon-input" id="lobby-chat-input" type="text" placeholder="Type a message..." maxlength="80" autocomplete="off">
+          <button class="btn btn-sm btn-primary" id="btn-lobby-chat-send">SEND</button>
+        </form>
+      </div>
     </div>
 
     <div class="lobby-controls" id="lobby-controls">
@@ -227,6 +236,13 @@
     <button class="emoji-btn" data-emoji="👑">👑</button>
     <button class="emoji-btn" data-emoji="👍">👍</button>
     <button class="emoji-btn" data-emoji="😮">😮</button>
+  </div>
+  <!-- In-game chat overlay -->
+  <div id="ingame-chat-container">
+    <div id="ingame-chat-messages"></div>
+    <form id="ingame-chat-form" onsubmit="return false;">
+      <input id="ingame-chat-input" type="text" placeholder="Press Enter to chat..." maxlength="80" autocomplete="off">
+    </form>
   </div>
   <div class="game-area">
     <div id="game-hud"></div>

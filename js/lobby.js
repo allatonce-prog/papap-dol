@@ -5,12 +5,13 @@ import { appState, showScreen } from './main.js';
 import { SCREEN, PLAYER_COLORS, PLAYER_AVATARS, MAPS, TILE_SIZE, SPAWN_POSITIONS } from './utils/constants.js';
 import {
   watchRoom, updateRoom, updatePlayer, removePlayer,
-  deleteRoom, setGameStatus,
+  deleteRoom, setGameStatus, sendChatMessage, watchChat,
 } from './firebase.js';
 import { sfxCountdownBeep, sfxJoin } from './game/Audio.js';
 import { GameManager } from './game/GameManager.js';
 
 let _unsubLobby = null;
+let _unsubChat  = null;
 let _gameManager = null;
 
 // ── Init ──────────────────────────────────────────────────────
@@ -23,6 +24,31 @@ export function initLobby() {
       .then(() => showToast('Room code copied!'))
       .catch(() => { });
   });
+
+  // Lobby Chat form
+  const chatForm = document.getElementById('lobby-chat-form');
+  const chatInput = document.getElementById('lobby-chat-input');
+  const sendBtn = document.getElementById('btn-lobby-chat-send');
+
+  const onSendMsg = () => {
+    const text = chatInput.value.trim();
+    if (!text || !appState.roomId) return;
+    chatInput.value = '';
+    const room = appState.roomData;
+    const colorIndex = room?.players?.[appState.playerId]?.colorIndex ?? 0;
+    const color = PLAYER_COLORS[colorIndex];
+    sendChatMessage(appState.roomId, {
+      sender: appState.nickname || 'Guest',
+      text: text,
+      color: color,
+    }).catch(() => {});
+  };
+
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    onSendMsg();
+  });
+  sendBtn.addEventListener('click', onSendMsg);
 
   // Observe lobby screen becoming visible
   const lobbyScreen = document.getElementById(SCREEN.LOBBY);
@@ -44,10 +70,32 @@ export function initLobby() {
 function startLobbyWatch() {
   if (_unsubLobby) return;
   _unsubLobby = watchRoom(appState.roomId, handleRoomUpdate);
+  startChatWatch();
 }
 
 function stopLobbyWatch() {
   if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
+  stopChatWatch();
+}
+
+function startChatWatch() {
+  if (_unsubChat) return;
+  const messagesDiv = document.getElementById('lobby-chat-messages');
+  messagesDiv.innerHTML = '';
+  _unsubChat = watchChat(appState.roomId, chatData => {
+    const list = Object.values(chatData || {}).sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+    messagesDiv.innerHTML = list.map(m => `
+      <div class="lobby-chat-msg">
+        <span class="chat-name" style="color:${m.color || '#fff'}">${escHtml(m.sender)}:</span>
+        <span class="chat-text">${escHtml(m.text)}</span>
+      </div>
+    `).join('');
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  });
+}
+
+function stopChatWatch() {
+  if (_unsubChat) { _unsubChat(); _unsubChat = null; }
 }
 
 function handleRoomUpdate(room) {

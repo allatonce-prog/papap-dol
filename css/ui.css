@@ -334,6 +334,56 @@
   padding: 6px 14px;
 }
 
+.lobby-content-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--gap-lg);
+  align-items: stretch;
+  width: 100%;
+}
+
+.lobby-chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+}
+
+.lobby-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: var(--gap-sm);
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.lobby-chat-msg {
+  word-break: break-all;
+}
+
+.lobby-chat-msg .chat-name {
+  font-weight: bold;
+}
+
+.lobby-chat-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.lobby-chat-input-row input {
+  flex: 1;
+}
+
 .lobby-players {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -654,6 +704,15 @@ input[type="range"] {
   .lobby-container { gap: var(--gap-md); }
   .lobby-room-name { font-size: var(--font-size-sm); }
   .lobby-map-badge { font-size: 0.4rem; padding: 4px 10px; }
+
+  .lobby-content-layout {
+    grid-template-columns: 1fr;
+    gap: var(--gap-md);
+  }
+  .lobby-chat-wrapper {
+    height: 180px;
+    padding: var(--gap-sm);
+  }
 
   .lobby-players {
     grid-template-columns: 1fr 1fr;
