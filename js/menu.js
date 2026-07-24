@@ -102,6 +102,27 @@ export function initMenu() {
     m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
   });
 
+  // Force update button
+  document.getElementById('btn-force-update')?.addEventListener('click', () => {
+    if (confirm('Clear cache and force a hard update reload?')) {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.forEach(key => caches.delete(key));
+        });
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(r => r.unregister());
+        });
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('update', Date.now().toString());
+      window.location.replace(url.toString());
+    }
+  });
+
   // Settings controls
   document.getElementById('setting-music').addEventListener('input', e => {
     setMusicVolume(+e.target.value);

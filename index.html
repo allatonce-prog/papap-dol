@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <style>
     /* Prevent double-tap zoom & text selection globally */
     * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -19,9 +22,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>">
-  <link rel="stylesheet" href="css/main.css?v=3">
-  <link rel="stylesheet" href="css/ui.css?v=3">
-  <link rel="stylesheet" href="css/game.css?v=3">
+  <link rel="stylesheet" href="css/main.css?v=4">
+  <link rel="stylesheet" href="css/ui.css?v=4">
+  <link rel="stylesheet" href="css/game.css?v=4">
 </head>
 <body>
 
@@ -313,6 +316,10 @@
       <span class="settings-label">NICKNAME</span>
       <button class="btn btn-sm" id="btn-change-nickname">CHANGE</button>
     </div>
+    <div class="settings-row">
+      <span class="settings-label">SYSTEM</span>
+      <button class="btn btn-sm btn-danger" id="btn-force-update" style="background:#e94560">HARD RELOAD</button>
+    </div>
 
     <button class="btn btn-primary w-full mt-md" id="btn-settings-close">CLOSE</button>
   </div>
@@ -390,6 +397,6 @@
 <!-- ══════════════════════════════════════════════════════════ -->
 <!-- MAIN JS (ES6 module)                                       -->
 <!-- ══════════════════════════════════════════════════════════ -->
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js?v=4"></script>
 </body>
 </html>
