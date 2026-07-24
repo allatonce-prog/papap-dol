@@ -2,7 +2,7 @@
 //  PAPAP DOL — Room Browser & Create Room
 // ============================================================
 import { appState, showScreen } from './main.js';
-import { SCREEN, PLAYER_COLORS, PLAYER_AVATARS, MAPS } from './utils/constants.js';
+import { SCREEN, PLAYER_COLORS, PLAYER_AVATARS, PLAYER_DARK, MAPS } from './utils/constants.js';
 import { generateRoomName, generateRoomId } from './utils/names.js';
 import {
   watchRooms, createRoom, joinRoom, getRoom,
@@ -215,6 +215,7 @@ function buildPlayerData(colorIndex, ready) {
     nickname      : appState.nickname,
     colorIndex,
     color         : PLAYER_COLORS[colorIndex],
+    colorDark     : PLAYER_DARK[colorIndex],
     avatar        : PLAYER_AVATARS[colorIndex],
     alive         : true,
     px            : 0,

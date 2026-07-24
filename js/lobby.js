@@ -142,6 +142,8 @@ function renderLobby(room) {
   document.getElementById('lobby-map-badge').textContent = `🗺️ ${room.map || 'Classic'}`;
   document.getElementById('lobby-room-code').textContent = `📋 ${appState.roomId}`;
 
+  renderCustomizer(room);
+
   const playersMap = room.players || {};
   const playerList = Object.entries(playersMap)
     .sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0));
@@ -455,4 +457,75 @@ function showToast(msg) {
 
 function escHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const AVATAR_OPTIONS = ['🙂', '😎', '😀', '🤠', '🧙', '👽', '🤖', '👾', '🦊', '🐸', '🐼', '💀', '🎃', '🐯'];
+const COLOR_PRESETS = [
+  { hex: '#00d4ff', dark: '#005577' }, // Cyan
+  { hex: '#ff4466', dark: '#771122' }, // Red
+  { hex: '#44ff88', dark: '#117733' }, // Green
+  { hex: '#ffcc00', dark: '#775500' }, // Gold
+  { hex: '#ff00ff', dark: '#770077' }, // Pink
+  { hex: '#ff6600', dark: '#772200' }, // Orange
+  { hex: '#a855f7', dark: '#4c1d95' }, // Purple
+];
+
+function renderCustomizer(room) {
+  const myPlayer = room.players?.[appState.playerId];
+  if (!myPlayer) return;
+
+  const currentAvatar = myPlayer.avatar || '🙂';
+  const currentColor  = myPlayer.color  || '#00d4ff';
+
+  // Render Avatars
+  const avatarContainer = document.getElementById('custom-avatars');
+  if (avatarContainer) {
+    avatarContainer.innerHTML = AVATAR_OPTIONS.map(av => {
+      const isSel = av === currentAvatar;
+      return `
+        <button class="custom-avatar-btn${isSel ? ' selected' : ''}" data-avatar="${av}">
+          ${av}
+        </button>
+      `;
+    }).join('');
+  }
+
+  // Render Colors
+  const colorContainer = document.getElementById('custom-colors');
+  if (colorContainer) {
+    colorContainer.innerHTML = COLOR_PRESETS.map(c => {
+      const isSel = c.hex === currentColor;
+      return `
+        <button class="custom-color-btn${isSel ? ' selected' : ''}" 
+                data-color="${c.hex}" 
+                data-dark="${c.dark}" 
+                style="background:${c.hex}">
+        </button>
+      `;
+    }).join('');
+  }
+
+  // Event delegations
+  if (avatarContainer && !avatarContainer.dataset.wired) {
+    avatarContainer.dataset.wired = 'true';
+    avatarContainer.addEventListener('click', e => {
+      const btn = e.target.closest('.custom-avatar-btn');
+      if (btn) {
+        const avatar = btn.getAttribute('data-avatar');
+        updatePlayer(appState.roomId, appState.playerId, { avatar }).catch(() => {});
+      }
+    });
+  }
+
+  if (colorContainer && !colorContainer.dataset.wired) {
+    colorContainer.dataset.wired = 'true';
+    colorContainer.addEventListener('click', e => {
+      const btn = e.target.closest('.custom-color-btn');
+      if (btn) {
+        const color = btn.getAttribute('data-color');
+        const colorDark = btn.getAttribute('data-dark');
+        updatePlayer(appState.roomId, appState.playerId, { color, colorDark }).catch(() => {});
+      }
+    });
+  }
 }

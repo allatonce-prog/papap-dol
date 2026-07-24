@@ -13,6 +13,7 @@ import {
   TILE_SIZE, CANVAS_W, CANVAS_H,
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
   POWERUP_POOL, POWERUP_SPAWN_CHANCE,
+  PLAYER_COLORS, PLAYER_AVATARS, PLAYER_DARK,
 } from '../utils/constants.js';
 import {
   watchRoom, updatePlayer, placeBomb as fbPlaceBomb,
@@ -87,6 +88,9 @@ export class GameManager {
         this.localPlayer.canGhost       = pdata.canGhost       ?? false;
         this.localPlayer.extraLives     = pdata.extraLives     ?? 0;
         this.localPlayer.nickname       = pdata.nickname       || 'Player';
+        this.localPlayer.color          = pdata.color          || PLAYER_COLORS[pdata.colorIndex];
+        this.localPlayer.colorDark      = pdata.colorDark      || PLAYER_DARK[pdata.colorIndex];
+        this.localPlayer.avatar         = pdata.avatar         || PLAYER_AVATARS[pdata.colorIndex];
       } else {
         const rp = new RemotePlayer(pid, pdata.colorIndex, pdata);
         rp.nickname = pdata.nickname || 'Player';

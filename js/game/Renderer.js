@@ -246,8 +246,8 @@ export class Renderer {
     const cy = p.py;
     const T  = TILE_SIZE;
     const r  = T * 0.38;
-    const color = PLAYER_COLORS[p.colorIndex] || '#ffffff';
-    const dark  = PLAYER_DARK[p.colorIndex]   || '#444444';
+    const color = p.color || PLAYER_COLORS[p.colorIndex] || '#ffffff';
+    const dark  = p.colorDark || PLAYER_DARK[p.colorIndex] || '#444444';
 
     // Bobbing shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -281,14 +281,14 @@ export class Renderer {
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
     // Face highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.beginPath(); ctx.arc(cx - r*0.25, cy - r*0.25, r*0.35, 0, Math.PI*2); ctx.fill();
 
-    // Eyes
-    const eyeOff = this._eyeOffset(p.direction);
-    ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.arc(cx + eyeOff.lx, cy + eyeOff.ly, 3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + eyeOff.rx, cy + eyeOff.ry, 3, 0, Math.PI*2); ctx.fill();
+    // Custom Avatar Emoji drawing
+    ctx.font = `${r * 1.35}px Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.avatar || '🙂', cx, cy + r * 0.05);
 
     // Nickname
     ctx.font = '6px "Press Start 2P", monospace';
@@ -374,22 +374,27 @@ export class Renderer {
     if (localPlayer) all.push({ p: localPlayer, isLocal: true });
     all.sort((a,b) => a.p.colorIndex - b.p.colorIndex);
 
-    hud.innerHTML = all.map(({ p, isLocal }) => `
-      <div class="hud-player${isLocal ? ' local-player' : ''}${!p.alive ? ' eliminated' : ''}"
-           style="border-color:${p.alive ? PLAYER_COLORS[p.colorIndex]+'44' : 'transparent'}">
-        <div class="hud-color-swatch" style="background:${PLAYER_COLORS[p.colorIndex]}"></div>
-        <span class="hud-nick" style="color:${PLAYER_COLORS[p.colorIndex]}">${esc(p.nickname || '?')}</span>
-        ${p.alive ? `
-          <span class="hud-stat"><span class="hud-stat-icon">💣</span>${p.bombCapacity}</span>
-          <span class="hud-stat"><span class="hud-stat-icon">🔥</span>${p.explosionRange}</span>
-          ${p.shield ? '<span class="hud-stat">🛡️</span>' : ''}
-          ${p.remoteDetonator ? '<span class="hud-stat">⏰</span>' : ''}
-          ${p.canKick ? '<span class="hud-stat">🦵</span>' : ''}
-          ${p.canGhost ? '<span class="hud-stat">👻</span>' : ''}
-          ${p.extraLives > 0 ? `<span class="hud-stat">❤️${p.extraLives}</span>` : ''}
-        ` : '<span style="color:var(--accent-red);font-size:0.5rem">ELIMINATED</span>'}
-      </div>
-    `).join('');
+    hud.innerHTML = all.map(({ p, isLocal }) => {
+      const pColor = p.color || PLAYER_COLORS[p.colorIndex] || '#ffffff';
+      return `
+        <div class="hud-player${isLocal ? ' local-player' : ''}${!p.alive ? ' eliminated' : ''}"
+             style="border-color:${p.alive ? pColor + '44' : 'transparent'}">
+          <div class="hud-color-swatch" style="background:${pColor};display:flex;align-items:center;justify-content:center;font-size:0.4rem;padding-bottom:1px">
+            ${p.avatar || '🙂'}
+          </div>
+          <span class="hud-nick" style="color:${pColor}">${esc(p.nickname || '?')}</span>
+          ${p.alive ? `
+            <span class="hud-stat"><span class="hud-stat-icon">💣</span>${p.bombCapacity}</span>
+            <span class="hud-stat"><span class="hud-stat-icon">🔥</span>${p.explosionRange}</span>
+            ${p.shield ? '<span class="hud-stat">🛡️</span>' : ''}
+            ${p.remoteDetonator ? '<span class="hud-stat">⏰</span>' : ''}
+            ${p.canKick ? '<span class="hud-stat">🦵</span>' : ''}
+            ${p.canGhost ? '<span class="hud-stat">👻</span>' : ''}
+            ${p.extraLives > 0 ? `<span class="hud-stat">❤️${p.extraLives}</span>` : ''}
+          ` : '<span style="color:var(--accent-red);font-size:0.5rem">ELIMINATED</span>'}
+        </div>
+      `;
+    }).join('');
   }
 }
 

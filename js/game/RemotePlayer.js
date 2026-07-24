@@ -1,7 +1,7 @@
 // ============================================================
 //  PAPAP DOL — Remote Player (Firebase-driven with interpolation)
 // ============================================================
-import { TILE_SIZE, SPAWN_POSITIONS } from '../utils/constants.js';
+import { TILE_SIZE, SPAWN_POSITIONS, PLAYER_COLORS, PLAYER_AVATARS, PLAYER_DARK } from '../utils/constants.js';
 
 export class RemotePlayer {
   constructor(playerId, colorIndex, initialData) {
@@ -27,8 +27,9 @@ export class RemotePlayer {
     this.canGhost       = initialData?.canGhost ?? false;
     this.extraLives     = initialData?.extraLives ?? 0;
     this.nickname       = initialData?.nickname ?? '???';
-    this.color          = initialData?.color ?? '#ffffff';
-    this.avatar         = initialData?.avatar ?? '🙂';
+    this.color          = initialData?.color ?? PLAYER_COLORS[colorIndex] ?? '#ffffff';
+    this.colorDark      = initialData?.colorDark ?? PLAYER_DARK[colorIndex] ?? '#444444';
+    this.avatar         = initialData?.avatar ?? PLAYER_AVATARS[colorIndex] ?? '🙂';
     this.emoji          = initialData?.emoji ?? null;
     this.emojiTime      = initialData?.emojiTime ?? 0;
 
@@ -55,6 +56,9 @@ export class RemotePlayer {
     if (data.extraLives !== undefined)     this.extraLives     = data.extraLives;
     if (data.emoji !== undefined)          this.emoji          = data.emoji;
     if (data.emojiTime !== undefined)      this.emojiTime      = data.emojiTime;
+    if (data.color)                        this.color          = data.color;
+    if (data.colorDark)                    this.colorDark      = data.colorDark;
+    if (data.avatar)                       this.avatar         = data.avatar;
   }
 
   update(dt) {

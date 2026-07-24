@@ -650,6 +650,97 @@ input[type="range"] {
 }
 #password-modal.open { display: flex; }
 
+/* ── LOBBY CHARACTER CUSTOMIZER ──────────────────────────────── */
+.lobby-customizer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--gap-lg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  margin-bottom: var(--gap-md);
+}
+
+.customizer-title {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+  text-align: left;
+  margin: 0;
+}
+
+.customizer-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.customizer-section {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-lg);
+}
+
+.customizer-label {
+  font-family: var(--font-pixel);
+  font-size: 0.35rem;
+  color: var(--text-muted);
+  width: 70px;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.customizer-options {
+  display: flex;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+}
+
+.custom-avatar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all var(--tr-fast);
+}
+
+.custom-avatar-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
+.custom-avatar-btn.selected {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+}
+
+.custom-color-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--tr-fast);
+}
+
+.custom-color-btn:hover {
+  transform: scale(1.2);
+}
+
+.custom-color-btn.selected {
+  border-color: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
 /* ══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE
    ══════════════════════════════════════════════════════════════ */
