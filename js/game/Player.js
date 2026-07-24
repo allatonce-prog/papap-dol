@@ -226,10 +226,8 @@ export class Player {
   // ── Death ──────────────────────────────────────────────────
   die() {
     if (!this.alive) return false;
-    if (this.shield) { this.shield = false; return false; } // absorbed!
-    if (this.extraLives > 0) { this.extraLives--; return false; } // revive
     this.alive = false;
-    return true; // actually died
+    return true; // actually died (instantly in one hit)
   }
 
   // ── Serialise for Firebase ─────────────────────────────────

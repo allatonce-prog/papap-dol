@@ -37,7 +37,7 @@ export class Bomb {
   }
 
   get shouldExplode() {
-    return !this.remote && !this.exploded && Date.now() >= this.explodeAt;
+    return !this.exploded && Date.now() >= this.explodeAt;
   }
 
   update(dt) {
