@@ -19,8 +19,13 @@ export class BotAI {
     this.targetTx = Math.floor(this.px / TILE_SIZE);
     this.targetTy = Math.floor(this.py / TILE_SIZE);
     
-    this.speed = initialData.speed || 195;
-    this.bombCapacity = 2;
+    // Dynamic Tactical Personalities
+    const personalities = ['aggressive', 'scavenger', 'bomber'];
+    this.personality = personalities[colorIndex % personalities.length];
+
+    // High speed tuned for fast gameplay
+    this.speed = (initialData.speed || 215) + (this.personality === 'bomber' ? 25 : 10);
+    this.bombCapacity = 3;
     this.explosionRange = 2;
     this.direction = 'down';
     this.alive = true;
@@ -98,7 +103,7 @@ export class BotAI {
       
       if (isLinedUp && this._hasGuaranteedEscape(cx, cy)) {
         this._plantBomb(cx, cy);
-        this.bombCooldown = 1.0;
+        this.bombCooldown = 0.4;
 
         const safePath = this._findPathToSafety(cx, cy);
         if (safePath && safePath.length > 0) {

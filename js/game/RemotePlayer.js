@@ -26,6 +26,8 @@ export class RemotePlayer {
     this.remoteDetonator= initialData?.remoteDetonator ?? false;
     this.canGhost       = initialData?.canGhost ?? false;
     this.extraLives     = initialData?.extraLives ?? 0;
+    this.hp             = initialData?.hp ?? 2;
+    this.maxHp          = initialData?.maxHp ?? 2;
     this.nickname       = initialData?.nickname ?? '???';
     this.color          = initialData?.color ?? PLAYER_COLORS[colorIndex] ?? '#ffffff';
     this.colorDark      = initialData?.colorDark ?? PLAYER_DARK[colorIndex] ?? '#444444';
@@ -54,6 +56,7 @@ export class RemotePlayer {
     if (data.remoteDetonator !== undefined)this.remoteDetonator= data.remoteDetonator;
     if (data.canGhost !== undefined)       this.canGhost       = data.canGhost;
     if (data.extraLives !== undefined)     this.extraLives     = data.extraLives;
+    if (data.hp !== undefined)             this.hp             = data.hp;
     if (data.emoji !== undefined)          this.emoji          = data.emoji;
     if (data.emojiTime !== undefined)      this.emojiTime      = data.emojiTime;
     if (data.color)                        this.color          = data.color;

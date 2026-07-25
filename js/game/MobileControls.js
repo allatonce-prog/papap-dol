@@ -134,13 +134,18 @@ export class MobileControls {
     this.KEYS['ArrowRight'] = false;
 
     if (dist > DEAD) {
-      // 4-directional: pick dominant axis
-      if (absDx >= absDy) {
-        if (dx > 0) this.KEYS['ArrowRight'] = true;
-        else        this.KEYS['ArrowLeft']  = true;
+      // Automatic 2D Corner Detection:
+      // Map 360-degree joystick angle into cardinal directions with corner auto-alignment
+      const deg = angle * (180 / Math.PI); // -180 to 180
+
+      if (deg >= -45 && deg < 45) {
+        this.KEYS['ArrowRight'] = true;
+      } else if (deg >= 45 && deg < 135) {
+        this.KEYS['ArrowDown']  = true;
+      } else if (deg >= 135 || deg < -135) {
+        this.KEYS['ArrowLeft']  = true;
       } else {
-        if (dy > 0) this.KEYS['ArrowDown']  = true;
-        else        this.KEYS['ArrowUp']    = true;
+        this.KEYS['ArrowUp']    = true;
       }
     }
   }

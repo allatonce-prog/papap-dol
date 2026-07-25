@@ -30,6 +30,7 @@ export class Renderer {
     this._drawBombs(ctx, game.bombs, theme);
     this._drawExplosions(ctx, game.explosions);
     this._drawSparks(ctx, game.sparks);
+    this._drawMonsters(ctx, game.monsters, now);
     this._drawPlayers(ctx, game, now);
     this._drawWeatherOverlays(ctx, game, now);
   }
@@ -234,6 +235,41 @@ export class Renderer {
     }
   }
 
+  // ── Monsters / Mobs ──────────────────────────────────────────
+  _drawMonsters(ctx, monsters, now) {
+    if (!monsters) return;
+    for (const m of monsters.values()) {
+      if (!m.alive) continue;
+      const cx = m.px;
+      const cy = m.py;
+      const r  = TILE_SIZE * 0.38;
+
+      // Glow & Pulsing shadow
+      ctx.save();
+      ctx.globalAlpha = 0.35 + 0.15 * Math.sin(now / 200);
+      ctx.fillStyle = m.color;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.ellipse(cx, cy + r + 4, r * 0.6, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Mob Body Circle
+      ctx.fillStyle = m.color + '44';
+      ctx.strokeStyle = m.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Mob Emoji
+      const bob = Math.sin(now / 150) * 3;
+      ctx.font = `${r * 1.3}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(m.emoji, cx, cy + bob);
+    }
+  }
+
   // ── Sparks ───────────────────────────────────────────────────
   _drawSparks(ctx, sparks) {
     for (const s of sparks) {
@@ -298,6 +334,12 @@ export class Renderer {
       ctx.setLineDash([]);
     }
 
+    // Damage Invulnerability Flashing (i-frames)
+    if (p.invulnerableUntil && now < p.invulnerableUntil) {
+      ctx.save();
+      ctx.globalAlpha = Math.floor(now / 80) % 2 === 0 ? 0.3 : 1.0;
+    }
+
     // Body
     ctx.fillStyle = color;
     ctx.strokeStyle = dark;
@@ -313,6 +355,18 @@ export class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(p.avatar || '🙂', cx, cy + r * 0.05);
+
+    if (p.invulnerableUntil && now < p.invulnerableUntil) {
+      ctx.restore();
+    }
+
+    // Draw HP Heart Bar (Hit 1 = 1 HP / Half Heart 💔, Hit 2 = Dead)
+    const hp = p.hp ?? 2;
+    const heartDisplay = hp >= 2 ? '❤️' : '💔';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(heartDisplay, cx, cy - r - 12);
 
     // Nickname
     ctx.font = '6px "Press Start 2P", monospace';

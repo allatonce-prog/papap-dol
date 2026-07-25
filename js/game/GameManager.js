@@ -9,6 +9,7 @@ import { PowerUp }      from './PowerUp.js';
 import { Renderer }     from './Renderer.js';
 import { MobileControls } from './MobileControls.js';
 import { BotAI }          from './BotAI.js';
+import { Monster }        from './Monster.js';
 import {
   TILE_SIZE, CANVAS_W, CANVAS_H,
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
@@ -44,6 +45,7 @@ export class GameManager {
     // Entities
     this.bombs        = new Map();  // id → Bomb
     this.powerUps     = new Map();  // id → PowerUp
+    this.monsters     = new Map();  // id → Monster
     this.explosions   = [];         // Explosion[]
     this.sparks       = [];         // Spark[]
     this.remotePlayers= new Map();  // playerId → RemotePlayer
@@ -295,6 +297,33 @@ export class GameManager {
       }
     });
 
+    // Monsters / Mobs update
+    this.monsters.forEach(m => {
+      if (!m.alive) return;
+      m.update(dt);
+
+      // Check if monster in explosion
+      for (const exp of this.explosions) {
+        const mx = Math.floor(m.px / TILE_SIZE);
+        const my = Math.floor(m.py / TILE_SIZE);
+        if (exp.containsTile(mx, my)) {
+          m.alive = false;
+          this.spawnPowerUpParticles(m.px, m.py, m.color);
+          this.monsters.delete(m.id);
+          sfxExplosion();
+          break;
+        }
+      }
+
+      // Monster collision with local player
+      if (m.alive && this.localPlayer?.alive) {
+        const dist = Math.hypot(m.px - this.localPlayer.px, m.py - this.localPlayer.py);
+        if (dist < TILE_SIZE * 0.55) {
+          this._killLocalPlayer();
+        }
+      }
+    });
+
     // Check if local player in explosion
     if (this.localPlayer?.alive) {
       for (const exp of this.explosions) {
@@ -356,7 +385,41 @@ export class GameManager {
     }
   }
 
-  // ── Firebase Room Updates ─────────────────────────────────── 
+  _spawnInitialMobs() {
+    const mobTypes = ['SLIME', 'GHOST', 'EXPLODER'];
+    const candidates = [
+      { x: 6, y: 5 },
+      { x: 3, y: 5 },
+      { x: 9, y: 5 },
+      { x: 6, y: 3 },
+      { x: 6, y: 7 },
+    ];
+    for (let i = 0; i < 3; i++) {
+      const pos = candidates[i % candidates.length];
+      const typeKey = mobTypes[i % mobTypes.length];
+      const mobId = `mob_init_${i}`;
+      this.monsters.set(mobId, new Monster(mobId, typeKey, pos.x, pos.y, this));
+    }
+  }
+
+  spawnPowerUpParticles(px, py, color = '#ffd700') {
+    for (let i = 0; i < 18; i++) {
+      const angle = (Math.PI * 2 / 18) * i + (Math.random() - 0.5) * 0.4;
+      const speed = 120 + Math.random() * 160;
+      this.sparks.push({
+        px,
+        py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color,
+        size: 4 + Math.random() * 6,
+        life: 1.0,
+        decay: 1.8 + Math.random() * 0.8
+      });
+    }
+  }
+
+  // ── Room update from Firebase ─────────────────────────────────── 
   _onRoomUpdate(room) {
     if (!this.running) return;
 
@@ -562,14 +625,19 @@ export class GameManager {
     // Write to Firebase (all clients write idempotent truths)
     crateDestructions.forEach(({ x, y }) => {
       fbDestroyCrate(this.roomId, x, y).catch(() => {});
-      // Spawn power-up with probability
-      if (Math.random() < POWERUP_SPAWN_CHANCE) {
+      const rand = Math.random();
+      if (rand < POWERUP_SPAWN_CHANCE) {
         const type = POWERUP_POOL[Math.floor(Math.random() * POWERUP_POOL.length)];
         const puData = { type, x, y, spawnedAt: Date.now() };
-        // Only bomb owner spawns power-ups to avoid duplicates
         if (bomb.owner === this.localPlayerId) {
           fbSpawnPowerUp(this.roomId, puData).catch(() => {});
         }
+      } else if (rand < POWERUP_SPAWN_CHANCE + 0.25 && this.isHost) {
+        // 25% chance to release a hidden mob when a player breaks a crate
+        const mobTypes = ['SLIME', 'GHOST', 'EXPLODER'];
+        const typeKey = mobTypes[Math.floor(Math.random() * mobTypes.length)];
+        const mobId = `mob_${Date.now()}_${Math.random()}`;
+        this.monsters.set(mobId, new Monster(mobId, typeKey, x, y, this));
       }
     });
 
@@ -613,6 +681,7 @@ export class GameManager {
       if (!pu.collected && pu.overlapsPlayer(lp.px, lp.py)) {
         pu.collected = true;
         lp.applyPowerUp(pu.type);
+        this.spawnPowerUpParticles(pu.px, pu.py, pu.color);
         this.powerUps.delete(id);
         sfxPowerUp();
         this._showPUToast(pu.emoji, pu.type);

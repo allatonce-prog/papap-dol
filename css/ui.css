@@ -812,65 +812,157 @@ input[type="range"] {
   /* ── Create ── */
   .form-row { grid-template-columns: 1fr; }
 
-  /* ── Lobby ── */
-  #lobby-screen { padding: var(--gap-md); }
-  .lobby-container { gap: var(--gap-sm); }
-  .lobby-room-name { font-size: var(--font-size-sm); }
-  .lobby-map-badge { font-size: 0.4rem; padding: 4px 10px; }
+  /* ── Lobby (Mobile AAA Clean Layout) ── */
+  #lobby-screen {
+    padding: 10px;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+  .lobby-container {
+    gap: 10px;
+    max-width: 100%;
+    height: auto;
+    padding-bottom: 20px;
+  }
+  .lobby-header {
+    background: rgba(18, 18, 36, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    backdrop-filter: blur(10px);
+  }
+  .lobby-room-name {
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+  }
+  .lobby-map-badge {
+    font-size: 0.45rem;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
 
   .lobby-content-layout {
     grid-template-columns: 1fr;
-    gap: var(--gap-sm);
+    gap: 10px;
   }
+
+  /* Mobile Player Grid: 2x2 Clean Player Cards */
+  .lobby-players {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .lobby-player-card {
+    min-height: 64px;
+    padding: 8px 10px;
+    gap: 8px;
+    background: rgba(25, 25, 48, 0.65);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  .player-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+  .player-nick {
+    font-size: 0.48rem;
+    font-weight: bold;
+  }
+  .player-role {
+    font-size: 0.38rem;
+    color: var(--accent-cyan);
+  }
+  .ready-badge {
+    font-size: 0.85rem;
+  }
+
+  /* Mobile Chat Box */
   .lobby-chat-wrapper {
-    height: 100px;
-    padding: 6px 10px;
+    height: 120px;
+    padding: 8px 10px;
+    background: rgba(14, 14, 28, 0.7);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .lobby-chat-messages {
     gap: 4px;
-    font-size: 0.42rem;
-    margin-bottom: 4px;
+    font-size: 0.44rem;
+    margin-bottom: 6px;
   }
   .lobby-chat-input-row input {
-    font-size: 0.4rem;
-    padding: 6px 8px;
+    font-size: 0.45rem;
+    padding: 8px 10px;
+    border-radius: 8px;
   }
   .lobby-chat-input-row .btn {
-    font-size: 0.4rem;
-    padding: 6px 10px;
+    font-size: 0.42rem;
+    padding: 8px 12px;
+    border-radius: 8px;
   }
+
+  /* Character Customizer Drawer */
   .lobby-customizer {
-    padding: var(--gap-sm) var(--gap-md);
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(20, 20, 40, 0.75);
+    border: 1px solid rgba(0, 212, 255, 0.25);
   }
   .lobby-customizer summary.customizer-title {
-    font-size: 0.45rem;
+    font-size: 0.5rem;
+  }
+  .customizer-sections {
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .customizer-section {
+    gap: 8px;
+  }
+  .customizer-label {
+    width: 50px;
+    font-size: 0.38rem;
   }
   .customizer-options {
-    gap: var(--gap-sm);
+    gap: 6px;
   }
   .custom-avatar-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 0.9rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
   }
   .custom-color-btn {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
   }
 
-  .lobby-players {
-    grid-template-columns: 1fr 1fr;
-    gap: var(--gap-sm);
+  /* Lobby Action Bar */
+  .lobby-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin-top: 4px;
   }
-  .lobby-player-card { min-height: 60px; padding: var(--gap-sm); gap: var(--gap-sm); }
-  .player-avatar { width: 30px; height: 30px; font-size: 0.9rem; }
-  .player-nick { font-size: 0.4rem; }
-  .player-role { font-size: 0.35rem; }
-
-  .lobby-controls { gap: var(--gap-sm); }
-  .lobby-controls .btn { font-size: 0.45rem; padding: 10px 12px; width: 100%; }
-  .lobby-controls .neon-select { font-size: 0.4rem; padding: 8px 10px; }
-  .lobby-hint { font-size: 0.38rem; margin-top: 2px; }
+  .lobby-controls .btn {
+    font-size: 0.55rem;
+    padding: 14px 16px;
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+  }
+  .lobby-controls .neon-select {
+    font-size: 0.48rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    width: 100%;
+  }
+  .lobby-hint {
+    font-size: 0.4rem;
+    margin-top: 2px;
+  }
 
   /* ── Winner ── */
   .winner-trophy { font-size: 3.5rem; }

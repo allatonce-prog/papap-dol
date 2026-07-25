@@ -15,8 +15,8 @@ export const TILE_WALL  = 1;
 export const TILE_CRATE = 2;
 
 // --- Player defaults ---
-export const DEFAULT_SPEED          = 180;  // px/s
-export const SPEED_BOOST_AMOUNT     = 48;   // px/s per Speed Up
+export const DEFAULT_SPEED          = 220;  // px/s (super fast gameplay)
+export const SPEED_BOOST_AMOUNT     = 55;   // px/s per Speed Up
 export const DEFAULT_BOMB_CAPACITY  = 1;
 export const DEFAULT_EXPLOSION_RANGE= 1;    // tiles in each direction
 

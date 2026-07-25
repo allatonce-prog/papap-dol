@@ -45,6 +45,9 @@ export class Player {
     this.remoteDetonator = false;
     this.canGhost     = false;
     this.extraLives   = 0;
+    this.hp           = 2; // 2 HP (Hit once = 1 HP / Half Heart, Hit twice = Eliminated)
+    this.maxHp        = 2;
+    this.invulnerableUntil = 0; // i-frames timestamp
     this.alive        = true;
 
     // Bomb tracking
@@ -125,41 +128,67 @@ export class Player {
       const newPx = this.px + moveX;
       const newPy = this.py + moveY;
 
-      // X movement with vertical corner-sliding auto-alignment
+      // Fast movement with automatic corner-nudging & predictive turn assistance
+      const cornerNudgeSpeed = spd * 1.25;
+
+      // X movement handling & Y auto-alignment
       if (!this._checkCollision(newPx, this.py)) {
         this.px = newPx;
       } else {
-        this.vx = 0; // stop sliding if hit obstacle
+        this.vx = 0; // blocked horizontally
         if (dy === 0) {
           const fracY = (this.py % TILE_SIZE) / TILE_SIZE;
-          if (fracY < 0.35) {
-            if (!this._checkCollision(this.px, this.py - spd * dt)) this.py -= spd * dt;
-          } else if (fracY > 0.65) {
-            if (!this._checkCollision(this.px, this.py + spd * dt)) this.py += spd * dt;
+          if (fracY < 0.48) {
+            if (!this._checkCollision(this.px, this.py - cornerNudgeSpeed * dt)) {
+              this.py -= cornerNudgeSpeed * dt;
+            }
+          } else if (fracY > 0.52) {
+            if (!this._checkCollision(this.px, this.py + cornerNudgeSpeed * dt)) {
+              this.py += cornerNudgeSpeed * dt;
+            }
           }
         }
       }
 
-      // Y movement with horizontal corner-sliding auto-alignment
+      // Y movement handling & X auto-alignment
       if (!this._checkCollision(this.px, newPy)) {
         this.py = newPy;
       } else {
-        this.vy = 0; // stop sliding if hit obstacle
+        this.vy = 0; // blocked vertically
         if (dx === 0) {
           const fracX = (this.px % TILE_SIZE) / TILE_SIZE;
-          if (fracX < 0.35) {
-            if (!this._checkCollision(this.px - spd * dt, this.py)) this.px -= spd * dt;
-          } else if (fracX > 0.65) {
-            if (!this._checkCollision(this.px + spd * dt, this.py)) this.px += spd * dt;
+          if (fracX < 0.48) {
+            if (!this._checkCollision(this.px - cornerNudgeSpeed * dt, this.py)) {
+              this.px -= cornerNudgeSpeed * dt;
+            }
+          } else if (fracX > 0.52) {
+            if (!this._checkCollision(this.px + cornerNudgeSpeed * dt, this.py)) {
+              this.px += cornerNudgeSpeed * dt;
+            }
           }
         }
       }
 
-      this._walkFrame += dt * 8;
+      // Pre-turn alignment (slips around corners when pressing turn key slightly before reaching open path)
+      if (dx !== 0 && dy === 0) {
+        const offset = Math.abs((this.py % TILE_SIZE) - TILE_SIZE / 2);
+        if (offset > 0 && offset < 14) {
+          const targetY = Math.floor(this.py / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+          this.py += Math.sign(targetY - this.py) * Math.min(Math.abs(targetY - this.py), cornerNudgeSpeed * dt);
+        }
+      } else if (dy !== 0 && dx === 0) {
+        const offset = Math.abs((this.px % TILE_SIZE) - TILE_SIZE / 2);
+        if (offset > 0 && offset < 14) {
+          const targetX = Math.floor(this.px / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+          this.px += Math.sign(targetX - this.px) * Math.min(Math.abs(targetX - this.px), cornerNudgeSpeed * dt);
+        }
+      }
+
+      this._walkFrame += dt * 10;
     }
 
     // Clamp to canvas
-    const hw = TILE_SIZE * 0.72 / 2;
+    const hw = (TILE_SIZE * 0.60) / 2;
     this.px = Math.max(hw, Math.min(this.game.mapPixelW - hw, this.px));
     this.py = Math.max(hw, Math.min(this.game.mapPixelH - hw, this.py));
 
@@ -177,7 +206,7 @@ export class Player {
   }
 
   _checkCollision(px, py) {
-    const half = (TILE_SIZE * 0.72) / 2 - 2;
+    const half = (TILE_SIZE * 0.60) / 2 - 2;
     const corners = [
       { x: px - half, y: py - half },
       { x: px + half, y: py - half },
@@ -185,22 +214,23 @@ export class Player {
       { x: px + half, y: py + half },
     ];
 
-    // Check if player is currently overlapping any active grace bomb tiles
-    for (const key of Array.from(this._graceTiles)) {
-      const [gtx, gty] = key.split(',').map(Number);
-      const bMinX = gtx * TILE_SIZE;
-      const bMaxX = (gtx + 1) * TILE_SIZE;
-      const bMinY = gty * TILE_SIZE;
-      const bMaxY = (gty + 1) * TILE_SIZE;
-      
-      const pMinX = px - half;
-      const pMaxX = px + half;
-      const pMinY = py - half;
-      const pMaxY = py + half;
+    const pMinX = px - half;
+    const pMaxX = px + half;
+    const pMinY = py - half;
+    const pMaxY = py + half;
 
-      // If player bounding box no longer overlaps this bomb tile, remove from grace!
+    // Dynamically track overlapping bomb tiles so player never gets trapped or stuck inside bombs
+    for (const b of this.game.bombs.values()) {
+      const key = `${b.x},${b.y}`;
+      const bMinX = b.x * TILE_SIZE;
+      const bMaxX = (b.x + 1) * TILE_SIZE;
+      const bMinY = b.y * TILE_SIZE;
+      const bMaxY = (b.y + 1) * TILE_SIZE;
+
       const overlaps = (pMinX < bMaxX && pMaxX > bMinX && pMinY < bMaxY && pMaxY > bMinY);
-      if (!overlaps) {
+      if (overlaps) {
+        this._graceTiles.add(key);
+      } else {
         this._graceTiles.delete(key);
       }
     }
@@ -211,7 +241,7 @@ export class Player {
       if (this.map.isWall(tx, ty)) return true;
       if (this.map.isCrate(tx, ty) && !this.canGhost) return true;
 
-      // Bomb collision: ignore if tile is in graceTiles!
+      // Bomb collision: allow passing through if tile is in graceTiles!
       const key = `${tx},${ty}`;
       if (this.game.hasBombAt(tx, ty) && !this._graceTiles.has(key)) {
         if (this.canKick) {
@@ -310,11 +340,40 @@ export class Player {
     }
   }
 
-  // ── Death ──────────────────────────────────────────────────
+  // ── Death & Damage ──────────────────────────────────────────
   die() {
     if (!this.alive) return false;
+    
+    // Shield protection check
+    if (this.shield) {
+      this.shield = false;
+      this.invulnerableUntil = Date.now() + 1000;
+      return false;
+    }
+
+    // Invulnerability i-frames check
+    if (Date.now() < this.invulnerableUntil) {
+      return false;
+    }
+
+    // Extra life check
+    if (this.extraLives > 0) {
+      this.extraLives--;
+      this.invulnerableUntil = Date.now() + 1200;
+      return false;
+    }
+
+    // Take 1 HP damage
+    this.hp -= 1;
+    if (this.hp > 0) {
+      // Hit 1: Lost half heart / 1 HP, grant 1.5s invulnerability i-frames
+      this.invulnerableUntil = Date.now() + 1500;
+      return false; // Still alive!
+    }
+
+    // Hit 2: 0 HP -> Fully Dead!
     this.alive = false;
-    return true; // actually died (instantly in one hit)
+    return true; // Actually eliminated
   }
 
   // ── Serialise for Firebase ─────────────────────────────────
@@ -324,6 +383,8 @@ export class Player {
       py: Math.round(this.py),
       direction     : this.direction,
       alive         : this.alive,
+      hp            : this.hp,
+      maxHp         : this.maxHp,
       speed         : this.speed,
       bombCapacity  : this.bombCapacity,
       explosionRange: this.explosionRange,
