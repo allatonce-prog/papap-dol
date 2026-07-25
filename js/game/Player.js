@@ -184,12 +184,34 @@ export class Player {
       { x: px - half, y: py + half },
       { x: px + half, y: py + half },
     ];
+
+    // Check if player is currently overlapping any active grace bomb tiles
+    for (const key of Array.from(this._graceTiles)) {
+      const [gtx, gty] = key.split(',').map(Number);
+      const bMinX = gtx * TILE_SIZE;
+      const bMaxX = (gtx + 1) * TILE_SIZE;
+      const bMinY = gty * TILE_SIZE;
+      const bMaxY = (gty + 1) * TILE_SIZE;
+      
+      const pMinX = px - half;
+      const pMaxX = px + half;
+      const pMinY = py - half;
+      const pMaxY = py + half;
+
+      // If player bounding box no longer overlaps this bomb tile, remove from grace!
+      const overlaps = (pMinX < bMaxX && pMaxX > bMinX && pMinY < bMaxY && pMaxY > bMinY);
+      if (!overlaps) {
+        this._graceTiles.delete(key);
+      }
+    }
+
     for (const c of corners) {
       const tx = Math.floor(c.x / TILE_SIZE);
       const ty = Math.floor(c.y / TILE_SIZE);
       if (this.map.isWall(tx, ty)) return true;
       if (this.map.isCrate(tx, ty) && !this.canGhost) return true;
-      // Bomb collision: treat bomb tiles as solid except grace tiles
+
+      // Bomb collision: ignore if tile is in graceTiles!
       const key = `${tx},${ty}`;
       if (this.game.hasBombAt(tx, ty) && !this._graceTiles.has(key)) {
         if (this.canKick) {
@@ -257,9 +279,8 @@ export class Player {
       remote        : this.remoteDetonator,
     };
 
-    // Grace tile so player can walk out
+    // Grace tile so player can walk out completely
     this._graceTiles.add(`${tx},${ty}`);
-    setTimeout(() => this._graceTiles.delete(`${tx},${ty}`), 500);
 
     sfxBombPlace();
     this.game.onLocalBombPlaced(bombData);

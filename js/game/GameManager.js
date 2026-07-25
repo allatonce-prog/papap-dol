@@ -163,8 +163,22 @@ export class GameManager {
     // Subscribe to Firebase
     this._unsubRoom = watchRoom(this.roomId, snap => this._onRoomUpdate(snap));
 
+    // Match duration (2 minutes = 120s)
+    this.matchDurationSec = 120;
+    this.matchStartTime = Date.now();
+
     // Start loop
     this._rafId = requestAnimationFrame(t => this._loop(t));
+  }
+
+  // ── Screen Shake ───────────────────────────────────────────
+  _screenShake() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.remove('screen-shake');
+    // Trigger reflow to restart animation
+    void wrapper.offsetWidth;
+    wrapper.classList.add('screen-shake');
   }
 
   // ── Main Loop ─────────────────────────────────────────────── 
@@ -177,7 +191,8 @@ export class GameManager {
     this._update(dt, now);
     this.renderer.render();
 
-    // Throttled HUD update
+    // Throttled HUD update (timer & player count)
+    this._updateMatchHUD();
     this.renderer.updateHUD(this.localPlayer, this.remotePlayers, this.localPlayerId);
 
     // Firebase sync at ~15fps
@@ -188,6 +203,34 @@ export class GameManager {
     }
 
     this._rafId = requestAnimationFrame(t => this._loop(t));
+  }
+
+  _updateMatchHUD() {
+    // Match timer
+    const elapsedSec = Math.floor((Date.now() - (this.matchStartTime || Date.now())) / 1000);
+    const remainingSec = Math.max(0, this.matchDurationSec - elapsedSec);
+    const mins = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+    const secs = String(remainingSec % 60).padStart(2, '0');
+    
+    const timerElem = document.getElementById('hud-match-timer');
+    if (timerElem) {
+      timerElem.textContent = `${mins}:${secs}`;
+      if (remainingSec <= 30) {
+        timerElem.parentElement.classList.add('urgent');
+      } else {
+        timerElem.parentElement.classList.remove('urgent');
+      }
+    }
+
+    // Alive players count
+    let aliveCount = 0;
+    if (this.localPlayer?.alive) aliveCount++;
+    this.remotePlayers.forEach(p => { if (p.alive) aliveCount++; });
+
+    const countElem = document.getElementById('hud-alive-count');
+    if (countElem) {
+      countElem.textContent = aliveCount;
+    }
   }
 
   // ── Update ─────────────────────────────────────────────────── 

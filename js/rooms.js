@@ -115,8 +115,23 @@ function renderRooms() {
 }
 
 // ── Join Room ─────────────────────────────────────────────────
+export async function joinRoomById(roomId) {
+  try {
+    const room = await getRoom(roomId);
+    if (!room) {
+      alert('Room not found or no longer exists.');
+      showScreen(SCREEN.MENU);
+      return;
+    }
+    await doJoinRoom(roomId, room);
+  } catch (err) {
+    console.error('Auto join failed:', err);
+    showScreen(SCREEN.MENU);
+  }
+}
+
 window._joinRoom = async (roomId) => {
-  const room = _allRooms[roomId];
+  const room = _allRooms[roomId] || await getRoom(roomId);
   if (!room) return;
   if (room.private) {
     _pendingJoinRoomId   = roomId;

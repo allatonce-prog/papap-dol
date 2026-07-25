@@ -11,9 +11,10 @@ let _musicOsc   = null;
 let _musicInterval = null;
 
 function resumeCtx() {
-  // Lazily create context only after a user gesture to avoid browser warning
   if (!_ctx) {
-    _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    _ctx = new AudioCtx();
     _masterGain = _ctx.createGain();
     _masterGain.gain.value = 0.7;
     _masterGain.connect(_ctx.destination);
@@ -26,7 +27,9 @@ function resumeCtx() {
     _sfxGain.gain.value = 0.6;
     _sfxGain.connect(_masterGain);
   }
-  if (_ctx.state === 'suspended') _ctx.resume();
+  if (_ctx && _ctx.state === 'suspended') {
+    _ctx.resume().catch(() => {});
+  }
   return _ctx;
 }
 

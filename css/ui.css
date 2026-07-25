@@ -659,22 +659,44 @@ input[type="range"] {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-panel);
-  margin-bottom: var(--gap-md);
+  margin-bottom: 0;
+  transition: all var(--tr-normal);
 }
 
-.customizer-title {
+.lobby-customizer summary.customizer-title {
   font-family: var(--font-pixel);
   font-size: var(--font-size-xs);
   color: var(--accent-cyan);
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
   text-align: left;
   margin: 0;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.lobby-customizer summary.customizer-title::-webkit-details-marker {
+  display: none;
+}
+
+.customizer-toggle-icon {
+  font-size: 0.6rem;
+  transition: transform var(--tr-fast);
+  color: var(--accent-cyan);
+}
+
+.lobby-customizer[open] .customizer-toggle-icon {
+  transform: rotate(180deg);
 }
 
 .customizer-sections {
   display: flex;
   flex-direction: column;
   gap: var(--gap-md);
+  margin-top: var(--gap-md);
 }
 
 .customizer-section {
@@ -792,32 +814,63 @@ input[type="range"] {
 
   /* ── Lobby ── */
   #lobby-screen { padding: var(--gap-md); }
-  .lobby-container { gap: var(--gap-md); }
+  .lobby-container { gap: var(--gap-sm); }
   .lobby-room-name { font-size: var(--font-size-sm); }
   .lobby-map-badge { font-size: 0.4rem; padding: 4px 10px; }
 
   .lobby-content-layout {
     grid-template-columns: 1fr;
-    gap: var(--gap-md);
+    gap: var(--gap-sm);
   }
   .lobby-chat-wrapper {
-    height: 180px;
-    padding: var(--gap-sm);
+    height: 100px;
+    padding: 6px 10px;
+  }
+  .lobby-chat-messages {
+    gap: 4px;
+    font-size: 0.42rem;
+    margin-bottom: 4px;
+  }
+  .lobby-chat-input-row input {
+    font-size: 0.4rem;
+    padding: 6px 8px;
+  }
+  .lobby-chat-input-row .btn {
+    font-size: 0.4rem;
+    padding: 6px 10px;
+  }
+  .lobby-customizer {
+    padding: var(--gap-sm) var(--gap-md);
+  }
+  .lobby-customizer summary.customizer-title {
+    font-size: 0.45rem;
+  }
+  .customizer-options {
+    gap: var(--gap-sm);
+  }
+  .custom-avatar-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+  .custom-color-btn {
+    width: 20px;
+    height: 20px;
   }
 
   .lobby-players {
     grid-template-columns: 1fr 1fr;
     gap: var(--gap-sm);
   }
-  .lobby-player-card { min-height: 72px; padding: var(--gap-sm); gap: var(--gap-sm); }
-  .player-avatar { width: 32px; height: 32px; font-size: 1rem; }
+  .lobby-player-card { min-height: 60px; padding: var(--gap-sm); gap: var(--gap-sm); }
+  .player-avatar { width: 30px; height: 30px; font-size: 0.9rem; }
   .player-nick { font-size: 0.4rem; }
   .player-role { font-size: 0.35rem; }
 
   .lobby-controls { gap: var(--gap-sm); }
-  .lobby-controls .btn { font-size: 0.45rem; padding: 10px 12px; }
+  .lobby-controls .btn { font-size: 0.45rem; padding: 10px 12px; width: 100%; }
   .lobby-controls .neon-select { font-size: 0.4rem; padding: 8px 10px; }
-  .lobby-hint { font-size: 0.4rem; }
+  .lobby-hint { font-size: 0.38rem; margin-top: 2px; }
 
   /* ── Winner ── */
   .winner-trophy { font-size: 3.5rem; }

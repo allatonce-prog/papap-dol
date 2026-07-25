@@ -55,14 +55,22 @@ async function main() {
   initRooms();
   initLobby();
 
-  // Check for saved nickname
+  // Check for auto-join URL param ?room=ABC123
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoRoomId = urlParams.get('room');
+
+  // Check for saved nickname & player ID
   const savedNick = localStorage.getItem('papap_nickname');
   const savedPid  = localStorage.getItem('papap_player_id');
 
   if (savedNick && savedNick.length >= 3) {
     appState.nickname = savedNick;
     appState.playerId = savedPid || generateAndSavePid();
-    showScreen(SCREEN.MENU);
+    if (autoRoomId) {
+      import('./rooms.js').then(m => m.joinRoomById(autoRoomId.trim().toUpperCase()));
+    } else {
+      showScreen(SCREEN.MENU);
+    }
   } else {
     showScreen(SCREEN.NICKNAME);
   }

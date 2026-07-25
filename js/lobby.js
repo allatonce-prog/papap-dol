@@ -18,12 +18,59 @@ let _gameManager = null;
 export function initLobby() {
   document.getElementById('btn-lobby-leave').addEventListener('click', handleLeave);
 
-  // Copy room code
+  // Copy shareable room link
   document.getElementById('lobby-room-code').addEventListener('click', () => {
-    navigator.clipboard?.writeText(appState.roomId)
-      .then(() => showToast('Room code copied!'))
-      .catch(() => { });
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${appState.roomId}`;
+    navigator.clipboard?.writeText(inviteUrl)
+      .then(() => showToast('Invite link copied to clipboard!'))
+      .catch(() => {
+        navigator.clipboard?.writeText(appState.roomId).then(() => showToast('Room code copied!'));
+      });
   });
+
+  // QR Code Modal click handler
+  const attachQRHandler = () => {
+    const qrBtn = document.getElementById('btn-lobby-qr');
+    const qrModal = document.getElementById('qr-modal');
+    const qrCloseBtn = document.getElementById('btn-qr-close');
+    const qrContainer = document.getElementById('qr-code-img-container');
+
+    if (qrBtn && !qrBtn.dataset.wired) {
+      qrBtn.dataset.wired = 'true';
+      qrBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (qrModal && qrContainer && appState.roomId) {
+          const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${appState.roomId}`;
+          const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(inviteUrl)}`;
+          qrContainer.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+              <img src="${qrApiUrl}" alt="QR Code" width="180" height="180" style="display:block;border-radius:4px" onerror="this.onerror=null;this.parentElement.innerHTML='<p style=\'color:#000;font-size:0.5rem;\'>Code: <b>${appState.roomId}</b></p>'">
+              <p style="font-size:0.45rem;color:#111;margin:0;font-family:monospace">ROOM: ${appState.roomId}</p>
+            </div>
+          `;
+          qrModal.classList.add('open');
+        }
+      });
+    }
+
+    if (qrCloseBtn && !qrCloseBtn.dataset.wired) {
+      qrCloseBtn.dataset.wired = 'true';
+      qrCloseBtn.addEventListener('click', () => {
+        if (qrModal) qrModal.classList.remove('open');
+      });
+    }
+
+    if (qrModal && !qrModal.dataset.wired) {
+      qrModal.dataset.wired = 'true';
+      qrModal.addEventListener('click', e => {
+        if (e.target === qrModal) qrModal.classList.remove('open');
+      });
+    }
+  };
+
+  attachQRHandler();
+  document.addEventListener('click', attachQRHandler);
 
   // Lobby Chat form
   const chatForm = document.getElementById('lobby-chat-form');

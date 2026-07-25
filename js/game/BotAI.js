@@ -1,11 +1,10 @@
 // ============================================================
-//  PAPAP DOL — Bot AI
-//  Advanced AI state machine for competitive bot opponents.
-//  Executes on the host client and syncs positions to Firebase.
+//  PAPAP DOL — Smart Extreme Bot AI
+//  Tactical AI with flood-fill pathfinding & zero self-destruction.
 // ============================================================
 
 import { TILE_SIZE, BOMB_FUSE_MS } from '../utils/constants.js';
-import { updatePlayer, placeBomb as fbPlaceBomb } from '../firebase.js';
+import { placeBomb as fbPlaceBomb } from '../firebase.js';
 
 export class BotAI {
   constructor(botId, colorIndex, initialData, gameManager) {
@@ -20,8 +19,9 @@ export class BotAI {
     this.targetTx = Math.floor(this.px / TILE_SIZE);
     this.targetTy = Math.floor(this.py / TILE_SIZE);
     
-    // Increased default speed from 130 to 165 to make them competitive
-    this.speed = initialData.speed || 165;
+    this.speed = initialData.speed || 195;
+    this.bombCapacity = 2;
+    this.explosionRange = 2;
     this.direction = 'down';
     this.alive = true;
     this.activeBombs = 0;
@@ -33,7 +33,6 @@ export class BotAI {
 
     if (this.bombCooldown > 0) this.bombCooldown -= dt;
 
-    // Check if we are close to our target tile
     const targetPx = this.targetTx * TILE_SIZE + TILE_SIZE / 2;
     const targetPy = this.targetTy * TILE_SIZE + TILE_SIZE / 2;
     
@@ -71,41 +70,40 @@ export class BotAI {
       { x: cx + 1, y: cy, dir: 'right' }
     ].filter(m => this._isValidMove(m.x, m.y));
 
-    // 1. ESCAPE DANGER FIRST
+    // 1. ESCAPE DANGER IMMEDIATELY (BFS path to nearest safe tile)
     if (isCurrentTileDangerous) {
+      const safePath = this._findPathToSafety(cx, cy);
+      if (safePath && safePath.length > 0) {
+        this.targetTx = safePath[0].x;
+        this.targetTy = safePath[0].y;
+        return;
+      }
+      // If no full path, pick move furthest from bomb explosion center
       const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
       if (safeMoves.length > 0) {
-        const choice = safeMoves[Math.floor(Math.random() * safeMoves.length)];
-        this.targetTx = choice.x;
-        this.targetTy = choice.y;
+        safeMoves.sort((a, b) => this._minDistToBomb(b.x, b.y) - this._minDistToBomb(a.x, a.y));
+        this.targetTx = safeMoves[0].x;
+        this.targetTy = safeMoves[0].y;
         return;
       }
-      if (moves.length > 0) {
-        const choice = moves[Math.floor(Math.random() * moves.length)];
-        this.targetTx = choice.x;
-        this.targetTy = choice.y;
-        return;
-      }
-      return; // stand still if trapped
+      return; // Trapped
     }
 
     const targetPlayer = this._getClosestPlayer(cx, cy);
 
-    // 2. AGGRESSIVE BOMB ATTACK (if player is lined up within range)
-    if (targetPlayer && this.bombCooldown <= 0 && this.activeBombs < 1) {
+    // 2. ATTACK ENEMY PLAYER (Only plant if a guaranteed escape path exists!)
+    if (targetPlayer && this.bombCooldown <= 0 && this.activeBombs < this.bombCapacity) {
       const dist = Math.abs(cx - targetPlayer.x) + Math.abs(cy - targetPlayer.y);
-      const isLinedUp = (cx === targetPlayer.x || cy === targetPlayer.y) && dist <= 3;
-      if (isLinedUp) {
+      const isLinedUp = (cx === targetPlayer.x || cy === targetPlayer.y) && dist <= (this.explosionRange + 1);
+      
+      if (isLinedUp && this._hasGuaranteedEscape(cx, cy)) {
         this._plantBomb(cx, cy);
-        this.bombCooldown = 2.0; // reduced cooldown from 4.0 to 2.0
+        this.bombCooldown = 1.0;
 
-        // Evacuate immediately
-        const dangerWithNewBomb = this._getDangerTiles();
-        const safeMoves = moves.filter(m => !dangerWithNewBomb.has(`${m.x},${m.y}`));
-        if (safeMoves.length > 0) {
-          const choice = safeMoves[Math.floor(Math.random() * safeMoves.length)];
-          this.targetTx = choice.x;
-          this.targetTy = choice.y;
+        const safePath = this._findPathToSafety(cx, cy);
+        if (safePath && safePath.length > 0) {
+          this.targetTx = safePath[0].x;
+          this.targetTy = safePath[0].y;
           return;
         }
       }
@@ -127,23 +125,23 @@ export class BotAI {
       }
     }
 
-    // 4. CLEAR CRATES
+    // 4. DESTROY CRATES (Only if safe escape path exists!)
     const hasAdjacentCrate = this._hasAdjacentCrate(cx, cy);
-    if (hasAdjacentCrate && this.activeBombs < 1 && this.bombCooldown <= 0) {
-      this._plantBomb(cx, cy);
-      this.bombCooldown = 2.0; // reduced cooldown to 2.0
-      
-      const dangerWithNewBomb = this._getDangerTiles();
-      const safeMoves = moves.filter(m => !dangerWithNewBomb.has(`${m.x},${m.y}`));
-      if (safeMoves.length > 0) {
-        const choice = safeMoves[Math.floor(Math.random() * safeMoves.length)];
-        this.targetTx = choice.x;
-        this.targetTy = choice.y;
-        return;
+    if (hasAdjacentCrate && this.activeBombs < this.bombCapacity && this.bombCooldown <= 0) {
+      if (this._hasGuaranteedEscape(cx, cy)) {
+        this._plantBomb(cx, cy);
+        this.bombCooldown = 1.0;
+        
+        const safePath = this._findPathToSafety(cx, cy);
+        if (safePath && safePath.length > 0) {
+          this.targetTx = safePath[0].x;
+          this.targetTy = safePath[0].y;
+          return;
+        }
       }
     }
 
-    // 5. CHASE/PATH TO CLOSEST PLAYER
+    // 5. HUNT ENEMY PLAYER
     if (targetPlayer) {
       const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
       if (safeMoves.length > 0) {
@@ -158,11 +156,10 @@ export class BotAI {
       }
     }
 
-    // 6. DEFAULT WANDER
+    // 6. SAFE PATROL
     if (moves.length > 0) {
       const safeMoves = moves.filter(m => !dangerTiles.has(`${m.x},${m.y}`));
       const pool = safeMoves.length > 0 ? safeMoves : moves;
-      
       const oppositeDir = { 'up': 'down', 'down': 'up', 'left': 'right', 'right': 'left' }[this.direction];
       const forwardMoves = pool.filter(m => m.dir !== oppositeDir);
       
@@ -171,6 +168,78 @@ export class BotAI {
       this.targetTx = finalMove.x;
       this.targetTy = finalMove.y;
     }
+  }
+
+  // Check if planting a bomb at (cx, cy) leaves a valid BFS path to a completely safe tile
+  _hasGuaranteedEscape(cx, cy) {
+    const danger = this._getDangerTiles();
+    const blast = this.map.calcExplosionCells(cx, cy, this.explosionRange);
+    blast.forEach(c => danger.add(`${c.x},${c.y}`));
+
+    const queue = [{ x: cx, y: cy, dist: 0 }];
+    const visited = new Set([`${cx},${cy}`]);
+
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      if (!danger.has(`${curr.x},${curr.y}`) && (curr.x !== cx || curr.y !== cy)) {
+        return true; // Found a safe tile!
+      }
+      if (curr.dist > 5) continue; // max search depth
+
+      const neighbors = [
+        { x: curr.x, y: curr.y - 1 }, { x: curr.x, y: curr.y + 1 },
+        { x: curr.x - 1, y: curr.y }, { x: curr.x + 1, y: curr.y }
+      ];
+
+      for (const n of neighbors) {
+        const key = `${n.x},${n.y}`;
+        if (!visited.has(key) && (n.x === cx && n.y === cy || this._isValidMove(n.x, n.y))) {
+          visited.add(key);
+          queue.push({ x: n.x, y: n.y, dist: curr.dist + 1 });
+        }
+      }
+    }
+    return false;
+  }
+
+  // BFS pathfinding to nearest safe tile outside danger zones
+  _findPathToSafety(cx, cy) {
+    const danger = this._getDangerTiles();
+    if (!danger.has(`${cx},${cy}`)) return [];
+
+    const queue = [{ x: cx, y: cy, path: [] }];
+    const visited = new Set([`${cx},${cy}`]);
+
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      if (!danger.has(`${curr.x},${curr.y}`)) {
+        return curr.path;
+      }
+      if (curr.path.length > 8) continue;
+
+      const neighbors = [
+        { x: curr.x, y: curr.y - 1 }, { x: curr.x, y: curr.y + 1 },
+        { x: curr.x - 1, y: curr.y }, { x: curr.x + 1, y: curr.y }
+      ];
+
+      for (const n of neighbors) {
+        const key = `${n.x},${n.y}`;
+        if (!visited.has(key) && this._isValidMove(n.x, n.y)) {
+          visited.add(key);
+          queue.push({ x: n.x, y: n.y, path: [...curr.path, { x: n.x, y: n.y }] });
+        }
+      }
+    }
+    return null;
+  }
+
+  _minDistToBomb(tx, ty) {
+    let minDist = 999;
+    for (const bomb of this.game.bombs.values()) {
+      const d = Math.abs(tx - bomb.x) + Math.abs(ty - bomb.y);
+      if (d < minDist) minDist = d;
+    }
+    return minDist;
   }
 
   _isValidMove(tx, ty) {
@@ -224,7 +293,7 @@ export class BotAI {
       const pux = Math.floor(pu.px / TILE_SIZE);
       const puy = Math.floor(pu.py / TILE_SIZE);
       const dist = Math.abs(pux - cx) + Math.abs(puy - cy);
-      if (dist < minDist && dist <= 5) {
+      if (dist < minDist) {
         minDist = dist;
         closest = { x: pux, y: puy };
       }
@@ -249,7 +318,7 @@ export class BotAI {
       y: ty,
       placedAt: Date.now(),
       explodeAt: Date.now() + BOMB_FUSE_MS,
-      explosionRange: 1,
+      explosionRange: this.explosionRange,
       remote: false
     };
 
@@ -269,8 +338,8 @@ export class BotAI {
       direction: this.direction,
       alive: this.alive,
       speed: this.speed,
-      bombCapacity: 1,
-      explosionRange: 1,
+      bombCapacity: this.bombCapacity,
+      explosionRange: this.explosionRange,
       shield: false,
       canKick: false,
       remoteDetonator: false,

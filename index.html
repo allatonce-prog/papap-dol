@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <script>
     // Automated cache buster to force updates for all players instantly
-    const VERSION = '1.1.1';
+    const VERSION = '1.2.1';
     const activeVer = localStorage.getItem('app_version');
     if (activeVer !== VERSION) {
       localStorage.setItem('app_version', VERSION);
@@ -37,9 +37,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>">
-  <link rel="stylesheet" href="css/main.css?v=9">
-  <link rel="stylesheet" href="css/ui.css?v=9">
-  <link rel="stylesheet" href="css/game.css?v=9">
+  <link rel="stylesheet" href="css/main.css?v=19">
+  <link rel="stylesheet" href="css/ui.css?v=19">
+  <link rel="stylesheet" href="css/game.css?v=19">
 </head>
 <body>
 
@@ -210,8 +210,9 @@
         <h2 class="lobby-room-name" id="lobby-room-name">Room Name</h2>
         <p class="lobby-map-badge" id="lobby-map-badge">🗺️ Classic</p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="lobby-room-code" class="lobby-map-badge" style="cursor:pointer" title="Click to copy room code">📋 CODE</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="lobby-room-code" class="lobby-map-badge" style="cursor:pointer" title="Click to copy room link">📋 LINK</span>
+        <button class="btn btn-sm btn-cyan" id="btn-lobby-qr" title="Show QR Code">📱 QR</button>
         <button class="btn btn-sm" id="btn-lobby-leave">← LEAVE</button>
       </div>
     </div>
@@ -229,8 +230,11 @@
       </div>
     </div>
     <!-- Character Customizer panel -->
-    <div class="lobby-customizer glass-panel" id="lobby-customizer-panel">
-      <h3 class="customizer-title">🎭 CUSTOMIZE YOUR CHARACTER</h3>
+    <details class="lobby-customizer glass-panel" id="lobby-customizer-panel">
+      <summary class="customizer-title">
+        <span>🎭 CUSTOMIZE YOUR CHARACTER</span>
+        <span class="customizer-toggle-icon">▼</span>
+      </summary>
       <div class="customizer-sections">
         <div class="customizer-section">
           <span class="customizer-label">AVATAR</span>
@@ -241,7 +245,7 @@
           <div class="customizer-options" id="custom-colors"></div>
         </div>
       </div>
-    </div>
+    </details>
     <div class="lobby-controls" id="lobby-controls">
       <!-- Host controls or ready button populated by lobby.js -->
     </div>
@@ -269,7 +273,10 @@
     <button class="emoji-btn" data-emoji="😮">😮</button>
   </div>
   <div class="game-area">
-    <div id="game-hud"></div>
+    <div id="game-hud">
+      <div class="hud-item hud-timer">⏱️ <span id="hud-match-timer">02:00</span></div>
+      <div class="hud-item hud-players">👥 ALIVE: <span id="hud-alive-count">4</span></div>
+    </div>
     <div class="canvas-wrapper" id="canvas-wrapper">
       <canvas id="game-canvas"></canvas>
     </div>
@@ -350,6 +357,20 @@
     </div>
 
     <button class="btn btn-primary w-full mt-md" id="btn-settings-close">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- QR CODE INVITE MODAL                                       -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="glass-panel modal-box flex-col gap-md" style="align-items:center;text-align:center;">
+    <h2 class="modal-title" style="margin-bottom:8px">📱 SCAN TO JOIN</h2>
+    <p style="font-size:0.45rem;color:var(--text-muted);margin-bottom:12px">Scan this QR code with a phone camera to join!</p>
+    <div id="qr-code-img-container" style="background:#fff;padding:12px;border-radius:12px;display:flex;justify-content:center;align-items:center;">
+      <!-- QR Image generated dynamically -->
+    </div>
+    <button class="btn btn-primary w-full mt-md" id="btn-qr-close">CLOSE</button>
   </div>
 </div>
 
