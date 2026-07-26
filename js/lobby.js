@@ -147,22 +147,40 @@ function stopChatWatch() {
 
 function handleRoomUpdate(room) {
   if (!room) {
-    // Room deleted (host left)
-    alert('The room was closed by the host.');
     showScreen(SCREEN.MENU);
     return;
   }
 
-  appState.roomData = room;
+  const players = room.players || {};
+  const humanPlayers = Object.entries(players).filter(([pid]) => !pid.startsWith('bot_'));
 
-  // Check for host change
-  if (room.hostId === appState.playerId) {
-    appState.isHost = true;
+  // 1. If no human players remain in the room, delete room from database!
+  if (humanPlayers.length === 0) {
+    if (appState.roomId) {
+      deleteRoom(appState.roomId).catch(() => {});
+    }
+    showScreen(SCREEN.MENU);
+    return;
   }
 
-  // Handle disconnected host reassignment
-  if (room.disconnectedHost && appState.isHost) {
-    updateRoom(appState.roomId, { disconnectedHost: null });
+  // 2. Automatic Host Transfer: If current host is no longer in room or disconnected
+  const currentHostInRoom = players[room.hostId] !== undefined;
+  if (!currentHostInRoom || room.disconnectedHost) {
+    humanPlayers.sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0));
+    const oldestPlayerId = humanPlayers[0][0];
+
+    // The longest-present player adopts host role and updates Firebase
+    if (oldestPlayerId === appState.playerId) {
+      appState.isHost = true;
+      updateRoom(appState.roomId, { hostId: oldestPlayerId, disconnectedHost: null }).catch(() => {});
+    }
+  }
+
+  appState.roomData = room;
+
+  // Sync isHost flag
+  if (room.hostId === appState.playerId) {
+    appState.isHost = true;
   }
 
   // If game started, enter game
@@ -249,6 +267,21 @@ function renderLobby(room) {
     mapSel.addEventListener('change', () => updateRoom(appState.roomId, { map: mapSel.value }));
     controls.appendChild(mapSel);
 
+    // Bot Mode selector
+    const botSel = document.createElement('select');
+    botSel.className = 'neon-select';
+    botSel.style.maxWidth = '140px';
+    const optBots = document.createElement('option');
+    optBots.value = 'with_bots'; optBots.textContent = '🤖 With Bots';
+    if ((room.botMode || 'with_bots') === 'with_bots') optBots.selected = true;
+    const optNoBots = document.createElement('option');
+    optNoBots.value = 'no_bots'; optNoBots.textContent = '👤 Solo / No Bots';
+    if (room.botMode === 'no_bots') optNoBots.selected = true;
+    botSel.appendChild(optBots);
+    botSel.appendChild(optNoBots);
+    botSel.addEventListener('change', () => updateRoom(appState.roomId, { botMode: botSel.value }));
+    controls.appendChild(botSel);
+
     const startBtn = document.createElement('button');
     startBtn.className = 'btn btn-primary';
     startBtn.id = 'btn-lobby-start';
@@ -272,7 +305,7 @@ function renderLobby(room) {
 
   const hint = document.getElementById('lobby-hint');
   hint.textContent = isHost
-    ? `${readyCount} of ${allCount} ready. You can start solo or wait for more players.`
+    ? `${readyCount} of ${allCount} ready. Mode: ${room.botMode === 'no_bots' ? 'Solo / Humans Only' : 'AI Bots Enabled'}.`
     : 'Click READY when you\'re prepared to play!';
 }
 
@@ -295,39 +328,41 @@ async function handleStartGame() {
     mapSeed: Math.floor(Math.random() * 999999)
   };
 
-  // If there are fewer players than maxPlayers, fill the remaining slots with bots!
-  const botNames = ['Bot Bob', 'Bot Rob', 'Bot Cob', 'Bot Job'];
-  const botAvatars = ['🤖', '👾', '👽', '💀'];
-  
-  let botCount = 0;
-  for (let i = 0; i < maxP; i++) {
-    const usedColorIndices = new Set(Object.values(players).map(p => p.colorIndex));
-    if (playerList.length + botCount < maxP) {
-      // Find the first free colorIndex
-      let colorIndex = 0;
-      for (let c = 0; c < maxP; c++) {
-        if (!usedColorIndices.has(c)) {
-          colorIndex = c;
-          usedColorIndices.add(c);
-          break;
+  // Only spawn bots if botMode is 'with_bots' (or default)
+  const isBotEnabled = (room.botMode || 'with_bots') === 'with_bots';
+  if (isBotEnabled) {
+    const botNames = ['Bot Bob', 'Bot Rob', 'Bot Cob', 'Bot Job'];
+    const botAvatars = ['🤖', '👾', '👽', '💀'];
+    
+    let botCount = 0;
+    for (let i = 0; i < maxP; i++) {
+      const usedColorIndices = new Set(Object.values(players).map(p => p.colorIndex));
+      if (playerList.length + botCount < maxP) {
+        // Find the first free colorIndex
+        let colorIndex = 0;
+        for (let c = 0; c < maxP; c++) {
+          if (!usedColorIndices.has(c)) {
+            colorIndex = c;
+            usedColorIndices.add(c);
+            break;
+          }
         }
-      }
-      
-      const spawn = SPAWN_POSITIONS[colorIndex] || SPAWN_POSITIONS[0];
-      const botId = `bot_${Date.now()}_${colorIndex}`;
-      updates[`players/${botId}`] = {
-        nickname: botNames[colorIndex] || 'Bot',
-        colorIndex: colorIndex,
-        color: PLAYER_COLORS[colorIndex],
-        avatar: botAvatars[colorIndex] || '🤖',
-        alive: true,
-        px: spawn.x * TILE_SIZE + TILE_SIZE / 2,
-        py: spawn.y * TILE_SIZE + TILE_SIZE / 2,
-        direction: 'down',
-        speed: 165, // Bot moves slightly faster now
-        bombCapacity: 1,
-        explosionRange: 1,
-        shield: false,
+        
+        const spawn = SPAWN_POSITIONS[colorIndex] || SPAWN_POSITIONS[0];
+        const botId = `bot_${Date.now()}_${colorIndex}`;
+        updates[`players/${botId}`] = {
+          nickname: botNames[colorIndex] || 'Bot',
+          colorIndex: colorIndex,
+          color: PLAYER_COLORS[colorIndex],
+          avatar: botAvatars[colorIndex] || '🤖',
+          alive: true,
+          px: spawn.x * TILE_SIZE + TILE_SIZE / 2,
+          py: spawn.y * TILE_SIZE + TILE_SIZE / 2,
+          direction: 'down',
+          speed: 165,
+          bombCapacity: 1,
+          explosionRange: 1,
+          shield: false,
         canKick: false,
         remoteDetonator: false,
         canGhost: false,
@@ -338,6 +373,7 @@ async function handleStartGame() {
       };
       botCount++;
     }
+  }
   }
 
   await updateRoom(appState.roomId, updates);
@@ -425,20 +461,21 @@ async function handleLeave() {
   if (!appState.roomId) { showScreen(SCREEN.MENU); return; }
 
   try {
-    if (appState.isHost) {
-      // Reassign host or delete room
-      const room = await import('./firebase.js').then(m => m.getRoom(appState.roomId));
-      const players = room?.players || {};
-      const others = Object.keys(players).filter(p => p !== appState.playerId);
-      if (others.length > 0) {
-        const newHostId = others.sort((a, b) => (players[a].joinedAt || 0) - (players[b].joinedAt || 0))[0];
-        await updateRoom(appState.roomId, { hostId: newHostId });
-        await removePlayer(appState.roomId, appState.playerId);
-      } else {
-        await deleteRoom(appState.roomId);
-      }
+    const room = await import('./firebase.js').then(m => m.getRoom(appState.roomId));
+    const players = room?.players || {};
+    const remainingHumans = Object.entries(players)
+      .filter(([pid]) => pid !== appState.playerId && !pid.startsWith('bot_'));
+
+    if (remainingHumans.length === 0) {
+      // 0 Human players remaining -> delete room from database!
+      await deleteRoom(appState.roomId);
     } else {
       await removePlayer(appState.roomId, appState.playerId);
+      if (appState.isHost) {
+        remainingHumans.sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0));
+        const newHostId = remainingHumans[0][0];
+        await updateRoom(appState.roomId, { hostId: newHostId, disconnectedHost: null });
+      }
     }
   } catch { /* ignore */ }
 

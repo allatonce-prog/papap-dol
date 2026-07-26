@@ -186,6 +186,7 @@ async function handleCreateRoom() {
   const nameInput = document.getElementById('room-name-input').value.trim();
   const maxP      = parseInt(document.getElementById('room-max-players').value);
   const map       = document.getElementById('room-map').value;
+  const botMode   = document.getElementById('room-bot-mode').value;
   const isPrivate = document.getElementById('room-private').checked;
   const password  = document.getElementById('room-password').value.trim();
   const roomName  = nameInput || generateRoomName();
@@ -199,6 +200,7 @@ async function handleCreateRoom() {
     roomName,
     hostId    : appState.playerId,
     map,
+    botMode,
     mapSeed,
     maxPlayers: maxP,
     private   : isPrivate,

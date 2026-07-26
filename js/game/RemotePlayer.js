@@ -2,6 +2,7 @@
 //  PAPAP DOL — Remote Player (Firebase-driven with interpolation)
 // ============================================================
 import { TILE_SIZE, SPAWN_POSITIONS, PLAYER_COLORS, PLAYER_AVATARS, PLAYER_DARK } from '../utils/constants.js';
+import { SnapshotBuffer } from './NetworkOptimizer.js';
 
 export class RemotePlayer {
   constructor(playerId, colorIndex, initialData) {
@@ -12,9 +13,16 @@ export class RemotePlayer {
     this.px  = (initialData?.px) ?? (spawn.x * TILE_SIZE + TILE_SIZE/2);
     this.py  = (initialData?.py) ?? (spawn.y * TILE_SIZE + TILE_SIZE/2);
 
-    // Interpolation targets
-    this._targetPx = this.px;
-    this._targetPy = this.py;
+    // High-performance snapshot buffer for smooth Hermite interpolation & dead reckoning
+    this.snapshotBuffer = new SnapshotBuffer(12, 40);
+    this.snapshotBuffer.push({
+      timestamp: Date.now(),
+      px: this.px,
+      py: this.py,
+      vx: initialData?.vx || 0,
+      vy: initialData?.vy || 0,
+      direction: initialData?.direction || 'down'
+    });
 
     this.direction      = initialData?.direction ?? 'down';
     this.alive          = initialData?.alive ?? true;
@@ -41,8 +49,17 @@ export class RemotePlayer {
 
   /** Called when Firebase pushes a position update */
   onRemoteUpdate(data) {
-    if (data.px !== undefined) this._targetPx = data.px;
-    if (data.py !== undefined) this._targetPy = data.py;
+    if (data.px !== undefined && data.py !== undefined) {
+      this.snapshotBuffer.push({
+        timestamp: data.ts || Date.now(),
+        px: data.px,
+        py: data.py,
+        vx: data.vx || 0,
+        vy: data.vy || 0,
+        direction: data.direction || this.direction
+      });
+    }
+
     if (data.direction)        this.direction  = data.direction;
     if (data.alive !== undefined) {
       if (this.alive && !data.alive) this._deathAnim = 1;
@@ -65,13 +82,19 @@ export class RemotePlayer {
   }
 
   update(dt) {
-    // Smooth interpolation toward Firebase target (lerp factor based on speed)
-    const lerp = Math.min(1, dt * 14);
-    this.px += (this._targetPx - this.px) * lerp;
-    this.py += (this._targetPy - this.py) * lerp;
+    // Sample high-precision interpolated state from snapshot buffer
+    const sample = this.snapshotBuffer.sample();
+    if (sample) {
+      const prevPx = this.px;
+      const prevPy = this.py;
 
-    const moving = Math.abs(this._targetPx - this.px) > 1 || Math.abs(this._targetPy - this.py) > 1;
-    if (moving) this._walkFrame += dt * 8;
+      this.px = sample.px;
+      this.py = sample.py;
+      if (sample.direction) this.direction = sample.direction;
+
+      const moving = Math.abs(this.px - prevPx) > 0.1 || Math.abs(this.py - prevPy) > 0.1;
+      if (moving) this._walkFrame += dt * 8;
+    }
 
     if (this._deathAnim > 0) {
       this._deathAnim = Math.max(0, this._deathAnim - dt * 2);

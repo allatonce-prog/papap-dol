@@ -43,19 +43,28 @@ export class BotAI {
     
     const dx = targetPx - this.px;
     const dy = targetPy - this.py;
-    const dist = Math.sqrt(dx*dx + dy*dy);
+    const dist = Math.hypot(dx, dy);
 
-    if (dist < 4) {
+    if (dist <= 2) {
       this.px = targetPx;
       this.py = targetPy;
+      this.vx = 0;
+      this.vy = 0;
       this._decideNextMove();
     } else {
-      const step = this.speed * dt;
-      if (Math.abs(dx) > 2) {
-        this.px += Math.sign(dx) * Math.min(step, Math.abs(dx));
+      const step = Math.min(this.speed * dt, dist);
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      this.vx = nx * this.speed;
+      this.vy = ny * this.speed;
+
+      this.px += nx * step;
+      this.py += ny * step;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
         this.direction = dx > 0 ? 'right' : 'left';
-      } else if (Math.abs(dy) > 2) {
-        this.py += Math.sign(dy) * Math.min(step, Math.abs(dy));
+      } else {
         this.direction = dy > 0 ? 'down' : 'up';
       }
     }
@@ -338,8 +347,10 @@ export class BotAI {
 
   toFirebase() {
     return {
-      px: Math.round(this.px),
-      py: Math.round(this.py),
+      px: Math.round(this.px * 10) / 10,
+      py: Math.round(this.py * 10) / 10,
+      vx: Math.round((this.vx || 0) * 10) / 10,
+      vy: Math.round((this.vy || 0) * 10) / 10,
       direction: this.direction,
       alive: this.alive,
       speed: this.speed,
@@ -349,7 +360,8 @@ export class BotAI {
       canKick: false,
       remoteDetonator: false,
       canGhost: false,
-      extraLives: 0
+      extraLives: 0,
+      ts: Date.now()
     };
   }
 }

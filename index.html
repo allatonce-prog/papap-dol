@@ -2,21 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <script>
-    // Automated cache buster to force updates for all players instantly
-    const VERSION = '1.2.1';
-    const activeVer = localStorage.getItem('app_version');
-    if (activeVer !== VERSION) {
-      localStorage.setItem('app_version', VERSION);
-      if ('caches' in window) {
-        caches.keys().then(keys => {
-          keys.forEach(k => caches.delete(k));
-        });
-      }
-      // Force reload ignoring cache
-      window.location.reload(true);
-    }
-  </script>
+  <script type="module" src="js/cacheBuster.js?v=1.5.0"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -178,6 +164,14 @@
           <option value="Factory">Factory</option>
         </select>
       </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="room-bot-mode">BOT ENEMIES</label>
+      <select id="room-bot-mode" class="neon-select">
+        <option value="with_bots" selected>🤖 With AI Bots (Fills empty slots)</option>
+        <option value="no_bots">👤 Solo / Humans Only (No Bots)</option>
+      </select>
     </div>
 
     <div class="toggle-row">

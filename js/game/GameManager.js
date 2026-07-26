@@ -1,15 +1,15 @@
 // ============================================================
 //  PAPAP DOL — Game Manager (orchestrates everything)
 // ============================================================
-import { GameMap }      from './Map.js';
+import { GameMap } from './Map.js';
 import { Player, KEYS } from './Player.js';
 import { RemotePlayer } from './RemotePlayer.js';
 import { Bomb, Explosion, Spark } from './Bomb.js';
-import { PowerUp }      from './PowerUp.js';
-import { Renderer }     from './Renderer.js';
+import { PowerUp } from './PowerUp.js';
+import { Renderer } from './Renderer.js';
 import { MobileControls } from './MobileControls.js';
-import { BotAI }          from './BotAI.js';
-import { Monster }        from './Monster.js';
+import { BotAI } from './BotAI.js';
+import { Monster } from './Monster.js';
 import {
   TILE_SIZE, CANVAS_W, CANVAS_H,
   SYNC_INTERVAL_MS, SPAWN_POSITIONS,
@@ -30,10 +30,10 @@ import {
 
 export class GameManager {
   constructor(roomId, localPlayerId, isHost, roomData) {
-    this.roomId        = roomId;
+    this.roomId = roomId;
     this.localPlayerId = localPlayerId;
-    this.isHost        = isHost;
-    this.roomData      = roomData;
+    this.isHost = isHost;
+    this.roomData = roomData;
 
     // Map
     this.map = new GameMap(roomData.map || 'Classic', roomData.mapSeed || 0);
@@ -43,25 +43,25 @@ export class GameManager {
     this.mapPixelH = CANVAS_H;
 
     // Entities
-    this.bombs        = new Map();  // id → Bomb
-    this.powerUps     = new Map();  // id → PowerUp
-    this.monsters     = new Map();  // id → Monster
-    this.explosions   = [];         // Explosion[]
-    this.sparks       = [];         // Spark[]
-    this.remotePlayers= new Map();  // playerId → RemotePlayer
-    this.localPlayer  = null;
-    this.botAIs       = new Map();  // botId → BotAI (host only)
+    this.bombs = new Map();  // id → Bomb
+    this.powerUps = new Map();  // id → PowerUp
+    this.monsters = new Map();  // id → Monster
+    this.explosions = [];         // Explosion[]
+    this.sparks = [];         // Spark[]
+    this.remotePlayers = new Map();  // playerId → RemotePlayer
+    this.localPlayer = null;
+    this.botAIs = new Map();  // botId → BotAI (host only)
 
     // Game state
-    this.running      = false;
-    this._rafId       = null;
-    this._syncTimer   = 0;
-    this._lastTime    = 0;
-    this._unsubRoom   = null;
-    this._gameOver    = false;
+    this.running = false;
+    this._rafId = null;
+    this._syncTimer = 0;
+    this._lastTime = 0;
+    this._unsubRoom = null;
+    this._gameOver = false;
     this._processedExplosions = new Set(); // bomb IDs already exploded locally
-    this._mobileControls      = null;
-    this._cancelHostPresence  = null; // fn to cancel onDisconnect room removal
+    this._mobileControls = null;
+    this._cancelHostPresence = null; // fn to cancel onDisconnect room removal
 
     // Renderer
     const canvas = document.getElementById('game-canvas');
@@ -75,7 +75,7 @@ export class GameManager {
 
   // ── Start ─────────────────────────────────────────────────── 
   start() {
-    this.running   = true;
+    this.running = true;
     this._lastTime = performance.now();
 
     // Build local and remote players from roomData
@@ -84,18 +84,18 @@ export class GameManager {
       if (pid === this.localPlayerId) {
         this.localPlayer = new Player(pid, pdata.colorIndex, this);
         // Restore stats if reconnecting
-        this.localPlayer.speed          = pdata.speed          ?? 180;
-        this.localPlayer.bombCapacity   = pdata.bombCapacity   ?? 3;
+        this.localPlayer.speed = pdata.speed ?? 180;
+        this.localPlayer.bombCapacity = pdata.bombCapacity ?? 3;
         this.localPlayer.explosionRange = pdata.explosionRange ?? 1;
-        this.localPlayer.shield         = pdata.shield         ?? false;
-        this.localPlayer.canKick        = pdata.canKick        ?? false;
-        this.localPlayer.remoteDetonator= pdata.remoteDetonator?? false;
-        this.localPlayer.canGhost       = pdata.canGhost       ?? false;
-        this.localPlayer.extraLives     = pdata.extraLives     ?? 0;
-        this.localPlayer.nickname       = pdata.nickname       || 'Player';
-        this.localPlayer.color          = pdata.color          || PLAYER_COLORS[pdata.colorIndex];
-        this.localPlayer.colorDark      = pdata.colorDark      || PLAYER_DARK[pdata.colorIndex];
-        this.localPlayer.avatar         = pdata.avatar         || PLAYER_AVATARS[pdata.colorIndex];
+        this.localPlayer.shield = pdata.shield ?? false;
+        this.localPlayer.canKick = pdata.canKick ?? false;
+        this.localPlayer.remoteDetonator = pdata.remoteDetonator ?? false;
+        this.localPlayer.canGhost = pdata.canGhost ?? false;
+        this.localPlayer.extraLives = pdata.extraLives ?? 0;
+        this.localPlayer.nickname = pdata.nickname || 'Player';
+        this.localPlayer.color = pdata.color || PLAYER_COLORS[pdata.colorIndex];
+        this.localPlayer.colorDark = pdata.colorDark || PLAYER_DARK[pdata.colorIndex];
+        this.localPlayer.avatar = pdata.avatar || PLAYER_AVATARS[pdata.colorIndex];
       } else {
         const rp = new RemotePlayer(pid, pdata.colorIndex, pdata);
         rp.nickname = pdata.nickname || 'Player';
@@ -213,7 +213,7 @@ export class GameManager {
     const remainingSec = Math.max(0, this.matchDurationSec - elapsedSec);
     const mins = String(Math.floor(remainingSec / 60)).padStart(2, '0');
     const secs = String(remainingSec % 60).padStart(2, '0');
-    
+
     const timerElem = document.getElementById('hud-match-timer');
     if (timerElem) {
       timerElem.textContent = `${mins}:${secs}`;
@@ -285,14 +285,18 @@ export class GameManager {
     this.explosions = this.explosions.filter(e => e.alive);
 
     // Sparks
-    this.sparks.forEach(s => s.update(dt));
-    this.sparks = this.sparks.filter(s => s.alive);
+    this.sparks.forEach(s => {
+      s.px += s.vx * dt;
+      s.py += s.vy * dt;
+      s.life -= s.decay * dt;
+    });
+    this.sparks = this.sparks.filter(s => s.life > 0);
 
     // Power-ups expiry
     this.powerUps.forEach((pu, id) => {
       if (pu.isExpired && !pu.collected) {
         pu.collected = true;
-        fbCollectPowerUp(this.roomId, id).catch(() => {});
+        fbCollectPowerUp(this.roomId, id).catch(() => { });
         this.powerUps.delete(id);
       }
     });
@@ -345,20 +349,30 @@ export class GameManager {
             if (exp.containsTile(bx, by)) {
               bot.alive = false;
               sfxDeath();
-              updatePlayer(this.roomId, id, { alive: false }).catch(() => {});
+              updatePlayer(this.roomId, id, { alive: false }).catch(() => { });
               break;
             }
           }
         }
         if (bot.alive) {
           bot.update(dt);
+
+          // Update local render entity on host immediately every frame
+          const rp = this.remotePlayers.get(id);
+          if (rp) {
+            rp.px = bot.px;
+            rp.py = bot.py;
+            rp.direction = bot.direction;
+            rp.alive = bot.alive;
+          }
+
           // Check if bot collects power-up
           this.powerUps.forEach((pu, puid) => {
             if (!pu.collected && pu.overlapsPlayer(bot.px, bot.py)) {
               pu.collected = true;
               this.powerUps.delete(puid);
               sfxPowerUp();
-              fbCollectPowerUp(this.roomId, puid).catch(() => {});
+              fbCollectPowerUp(this.roomId, puid).catch(() => { });
             }
           });
         }
@@ -373,13 +387,13 @@ export class GameManager {
   _syncToFirebase() {
     if (!this.localPlayer) return;
     const data = this.localPlayer.toFirebase();
-    updatePlayer(this.roomId, this.localPlayerId, data).catch(() => {});
+    updatePlayer(this.roomId, this.localPlayerId, data).catch(() => { });
 
     // Sync bots to Firebase (host only)
     if (this.isHost && this.botAIs.size > 0) {
       this.botAIs.forEach((bot, id) => {
         if (bot.alive) {
-          updatePlayer(this.roomId, id, bot.toFirebase()).catch(() => {});
+          updatePlayer(this.roomId, id, bot.toFirebase()).catch(() => { });
         }
       });
     }
@@ -429,8 +443,8 @@ export class GameManager {
       this.destroy();
       alert('The host left. Returning to menu.');
       import('../main.js').then(({ appState, showScreen }) => {
-        appState.roomId   = null;
-        appState.isHost   = false;
+        appState.roomId = null;
+        appState.isHost = false;
         appState.roomData = null;
         showScreen('menu-screen');
       });
@@ -545,9 +559,9 @@ export class GameManager {
     }
 
     let dx = 0, dy = 0;
-    if (dir === 'up')    dy = -1;
-    if (dir === 'down')  dy = 1;
-    if (dir === 'left')  dx = -1;
+    if (dir === 'up') dy = -1;
+    if (dir === 'down') dy = 1;
+    if (dir === 'left') dx = -1;
     if (dir === 'right') dx = 1;
     if (dx === 0 && dy === 0) return;
 
@@ -585,17 +599,21 @@ export class GameManager {
     }
 
     if (destX !== tx || destY !== ty) {
+      targetBomb.x = destX;
+      targetBomb.y = destY;
+      this.spawnPowerUpParticles(targetBomb.visualPx, targetBomb.visualPy, '#00e5ff');
+      sfxBombPlace();
       updateRoom(this.roomId, {
         [`bombs/${targetBomb.id}/x`]: destX,
         [`bombs/${targetBomb.id}/y`]: destY
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }
 
   // ── Explosion ─────────────────────────────────────────────── 
   _triggerExplosion(bomb) {
     const cells = this.map.calcExplosionCells(bomb.x, bomb.y, bomb.range);
-    const exp   = new Explosion(cells);
+    const exp = new Explosion(cells);
     this.explosions.push(exp);
 
     sfxExplosion();
@@ -616,7 +634,7 @@ export class GameManager {
         this.powerUps.forEach((pu, id) => {
           if (pu.x === cell.x && pu.y === cell.y) {
             this.powerUps.delete(id);
-            fbCollectPowerUp(this.roomId, id).catch(() => {});
+            fbCollectPowerUp(this.roomId, id).catch(() => { });
           }
         });
       }
@@ -624,13 +642,13 @@ export class GameManager {
 
     // Write to Firebase (all clients write idempotent truths)
     crateDestructions.forEach(({ x, y }) => {
-      fbDestroyCrate(this.roomId, x, y).catch(() => {});
+      fbDestroyCrate(this.roomId, x, y).catch(() => { });
       const rand = Math.random();
       if (rand < POWERUP_SPAWN_CHANCE) {
         const type = POWERUP_POOL[Math.floor(Math.random() * POWERUP_POOL.length)];
         const puData = { type, x, y, spawnedAt: Date.now() };
         if (bomb.owner === this.localPlayerId) {
-          fbSpawnPowerUp(this.roomId, puData).catch(() => {});
+          fbSpawnPowerUp(this.roomId, puData).catch(() => { });
         }
       } else if (rand < POWERUP_SPAWN_CHANCE + 0.25 && this.isHost) {
         // 25% chance to release a hidden mob when a player breaks a crate
@@ -643,7 +661,7 @@ export class GameManager {
 
     // Remove bomb from DB (bomb owner does it, or host as fallback)
     if (bomb.owner === this.localPlayerId || this.isHost) {
-      fbRemoveBomb(this.roomId, bomb.id).catch(() => {});
+      fbRemoveBomb(this.roomId, bomb.id).catch(() => { });
     }
     this.bombs.delete(bomb.id);
 
@@ -685,7 +703,7 @@ export class GameManager {
         this.powerUps.delete(id);
         sfxPowerUp();
         this._showPUToast(pu.emoji, pu.type);
-        fbCollectPowerUp(this.roomId, id).catch(() => {});
+        fbCollectPowerUp(this.roomId, id).catch(() => { });
       }
     });
   }
@@ -698,7 +716,7 @@ export class GameManager {
 
     sfxDeath();
     this._showEliminationBanner();
-    updatePlayer(this.roomId, this.localPlayerId, { alive: false }).catch(() => {});
+    updatePlayer(this.roomId, this.localPlayerId, { alive: false }).catch(() => { });
   }
 
   // ── Winner Check ──────────────────────────────────────────── 
@@ -706,7 +724,7 @@ export class GameManager {
     if (!this.isHost || this._gameOver) return;
 
     const allPlayers = this.roomData?.players || {};
-    const allPids    = Object.keys(allPlayers);
+    const allPids = Object.keys(allPlayers);
     if (allPids.length < 2) return;
 
     // Collect alive status from local and remote
@@ -718,15 +736,15 @@ export class GameManager {
 
     if (alivePids.length === 1) {
       this._gameOver = true;
-      const winnerPid  = alivePids[0];
+      const winnerPid = alivePids[0];
       const winnerNick = allPlayers[winnerPid]?.nickname
         || (winnerPid === this.localPlayerId ? this.localPlayer?.nickname : null)
         || 'Unknown';
-      setWinner(this.roomId, winnerNick).catch(() => {});
+      setWinner(this.roomId, winnerNick).catch(() => { });
     } else if (alivePids.length === 0) {
       // Draw
       this._gameOver = true;
-      setWinner(this.roomId, 'Nobody (Draw)').catch(() => {});
+      setWinner(this.roomId, 'Nobody (Draw)').catch(() => { });
     }
   }
 
@@ -735,7 +753,7 @@ export class GameManager {
     this._gameOver = true;
     this.destroy();
     // Dynamic import to avoid circular refs
-    import('../lobby.js').then(m => m.showWinnerScreen(nick)).catch(() => {});
+    import('../lobby.js').then(m => m.showWinnerScreen(nick)).catch(() => { });
   }
 
   // ── Screen Shake ─────────────────────────────────────────── 
@@ -777,8 +795,8 @@ export class GameManager {
       }
     } catch { /* ignore */ }
     const { appState, showScreen } = await import('../main.js');
-    appState.roomId   = null;
-    appState.isHost   = false;
+    appState.roomId = null;
+    appState.isHost = false;
     appState.roomData = null;
     showScreen('menu-screen');
   }
@@ -815,6 +833,6 @@ export class GameManager {
       remote: false
     };
 
-    fbPlaceBomb(this.roomId, lavaData).catch(() => {});
+    fbPlaceBomb(this.roomId, lavaData).catch(() => { });
   }
 }

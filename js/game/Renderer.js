@@ -13,8 +13,15 @@ export class Renderer {
     this.ctx    = canvas.getContext('2d');
     this.game   = gameManager;
     this.theme  = gameManager.map.theme.colors;
-    canvas.width  = CANVAS_W;
-    canvas.height = CANVAS_H;
+
+    // High DPI / Retina Crisp Display Support
+    const dpr = window.devicePixelRatio || 1;
+    this.dpr = dpr;
+    canvas.width  = CANVAS_W * dpr;
+    canvas.height = CANVAS_H * dpr;
+    canvas.style.width  = CANVAS_W + 'px';
+    canvas.style.height = CANVAS_H + 'px';
+    this.ctx.scale(dpr, dpr);
   }
 
   // ── Main render ─────────────────────────────────────────────
@@ -27,8 +34,8 @@ export class Renderer {
 
     this._drawMap(ctx, theme, game.map);
     this._drawPowerUps(ctx, game.powerUps, now);
-    this._drawBombs(ctx, game.bombs, theme);
-    this._drawExplosions(ctx, game.explosions);
+    this._drawBombs(ctx, game.bombs, theme, now);
+    this._drawExplosions(ctx, game.explosions, now);
     this._drawSparks(ctx, game.sparks);
     this._drawMonsters(ctx, game.monsters, now);
     this._drawPlayers(ctx, game, now);
@@ -130,39 +137,50 @@ export class Renderer {
   }
 
   // ── Bombs ─────────────────────────────────────────────────── 
-  _drawBombs(ctx, bombs, theme) {
+  _drawBombs(ctx, bombs, theme, now) {
     for (const bomb of bombs.values()) {
       const cx = bomb.px;
       const cy = bomb.py;
       const r  = bomb.drawRadius;
       const t  = bomb.fuseProgress;
 
+      // Ambient Fuse Glow Aura
+      ctx.save();
+      const glowAlpha = 0.2 + 0.15 * Math.sin(now / 100);
+      const glowColor = t > 0.7 ? 'rgba(255, 50, 0, ' : 'rgba(255, 170, 0, ';
+      const grad = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 2.2);
+      grad.addColorStop(0, glowColor + (glowAlpha * 1.5) + ')');
+      grad.addColorStop(1, glowColor + '0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
       // Volcano Lava geyser bubbles
       if (bomb.owner === 'volcano') {
         ctx.fillStyle = 'rgba(255, 68, 0, 0.45)';
         ctx.beginPath(); ctx.arc(cx, cy, r * 1.3, 0, Math.PI * 2); ctx.fill();
 
-        const pulseRadius = r * (0.8 + 0.35 * Math.sin(Date.now() / 150));
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulseRadius);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.3, '#ffaa00');
-        grad.addColorStop(0.7, '#ff3300');
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
+        const pulseRadius = r * (0.8 + 0.35 * Math.sin(now / 150));
+        const gradLava = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulseRadius);
+        gradLava.addColorStop(0, '#ffffff');
+        gradLava.addColorStop(0.3, '#ffaa00');
+        gradLava.addColorStop(0.7, '#ff3300');
+        gradLava.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradLava;
         ctx.beginPath(); ctx.arc(cx, cy, pulseRadius, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#ffcc00';
         for (let i = 0; i < 3; i++) {
-          const bx = cx + Math.sin(Date.now()/200 + i*2) * r * 0.6;
-          const by = cy + Math.cos(Date.now()/250 + i*3) * r * 0.6;
+          const bx = cx + Math.sin(now/200 + i*2) * r * 0.6;
+          const by = cy + Math.cos(now/250 + i*3) * r * 0.6;
           ctx.beginPath(); ctx.arc(bx, by, 2, 0, Math.PI*2); ctx.fill();
         }
         continue;
       }
 
       // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.beginPath(); ctx.ellipse(cx, cy + r + 4, r * 0.7, r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath(); ctx.ellipse(cx, cy + r + 4, r * 0.75, r * 0.28, 0, 0, Math.PI * 2); ctx.fill();
 
       // Bomb body
       ctx.fillStyle = '#222';
@@ -171,7 +189,7 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
       // Shine
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
       ctx.beginPath(); ctx.arc(cx - r*0.2, cy - r*0.3, r*0.25, 0, Math.PI*2); ctx.fill();
 
       // Fuse
@@ -183,8 +201,8 @@ export class Renderer {
       ctx.stroke();
 
       // Spark (blinking near end)
-      if (t > 0.5 || Math.floor(Date.now() / 200) % 2 === 0) {
-        const sparkAlpha = 0.8 + 0.2 * Math.sin(Date.now() / 50);
+      if (t > 0.5 || Math.floor(now / 200) % 2 === 0) {
+        const sparkAlpha = 0.8 + 0.2 * Math.sin(now / 50);
         ctx.fillStyle = `rgba(255,200,0,${sparkAlpha})`;
         ctx.beginPath(); ctx.arc(cx + r * 0.2, cy - r * 1.8, 4, 0, Math.PI * 2); ctx.fill();
       }
@@ -199,8 +217,19 @@ export class Renderer {
   }
 
   // ── Explosions ───────────────────────────────────────────────
-  _drawExplosions(ctx, explosions) {
+  _drawExplosions(ctx, explosions, now) {
     for (const exp of explosions) {
+      const alpha = Math.max(0, exp.life / exp.maxLife);
+      
+      // Explosion Shockwave Ring
+      ctx.save();
+      const waveRadius = (1 - alpha) * TILE_SIZE * 1.4;
+      ctx.strokeStyle = `rgba(255, 200, 50, ${alpha * 0.6})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(exp.cx, exp.cy, waveRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
       const a = exp.alpha;
       ctx.save();
       ctx.globalAlpha = a;
@@ -309,6 +338,17 @@ export class Renderer {
     const color = p.color || PLAYER_COLORS[p.colorIndex] || '#ffffff';
     const dark  = p.colorDark || PLAYER_DARK[p.colorIndex] || '#444444';
 
+    // Power-up Aura Buff Effects
+    if (p.speed && p.speed > 200) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(0, 230, 255, ${0.5 + 0.3 * Math.sin(now / 120)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Bobbing shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath(); ctx.ellipse(cx, cy + r + 6, r * 0.7, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
@@ -325,13 +365,17 @@ export class Renderer {
       ctx.restore();
     }
 
-    // Local player indicator (small ring)
+    // Local player indicator (glowing neon cursor ring)
     if (isLocal) {
+      ctx.save();
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI * 2); ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Damage Invulnerability Flashing (i-frames)
