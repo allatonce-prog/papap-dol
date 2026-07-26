@@ -488,10 +488,14 @@ export class GameManager {
         existing.y = b.y;
       }
     });
-    // Remove bombs no longer in DB
+    // Remove bombs no longer in DB & trigger explosion visuals on remote clients
     this.bombs.forEach((bomb, id) => {
       if (id.startsWith('temp_')) return;
       if (!fbBombs[id]) {
+        if (!this._processedExplosions.has(id)) {
+          this._processedExplosions.add(id);
+          this._triggerExplosion(bomb);
+        }
         if (bomb.owner === this.localPlayerId && this.localPlayer) {
           this.localPlayer.onBombExploded(id);
         }

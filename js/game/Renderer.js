@@ -302,13 +302,12 @@ export class Renderer {
   // ── Sparks ───────────────────────────────────────────────────
   _drawSparks(ctx, sparks) {
     for (const s of sparks) {
+      if (s.life <= 0) continue;
       ctx.save();
-      ctx.globalAlpha = s.life;
+      ctx.globalAlpha = Math.max(0, s.life);
       ctx.fillStyle   = s.color;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur  = 6;
       ctx.beginPath();
-      ctx.arc(s.px, s.py, s.size / 2, 0, Math.PI * 2);
+      ctx.arc(s.px, s.py, (s.size || 4) / 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

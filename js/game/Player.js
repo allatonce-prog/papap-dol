@@ -379,8 +379,10 @@ export class Player {
   // ── Serialise for Firebase ─────────────────────────────────
   toFirebase() {
     return {
-      px: Math.round(this.px),
-      py: Math.round(this.py),
+      px: Math.round(this.px * 10) / 10,
+      py: Math.round(this.py * 10) / 10,
+      vx: Math.round((this.vx || 0) * 10) / 10,
+      vy: Math.round((this.vy || 0) * 10) / 10,
       direction     : this.direction,
       alive         : this.alive,
       hp            : this.hp,
@@ -395,6 +397,7 @@ export class Player {
       extraLives    : this.extraLives,
       emoji         : this.emoji || null,
       emojiTime     : this.emojiTime || 0,
+      ts            : Date.now(),
     };
   }
 }
