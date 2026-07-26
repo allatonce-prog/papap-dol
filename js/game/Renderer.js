@@ -10,12 +10,16 @@ import {
 export class Renderer {
   constructor(canvas, gameManager) {
     this.canvas = canvas;
-    this.ctx    = canvas.getContext('2d');
+    // Opaque context + desynchronized hint for low-latency 60-120FPS mobile rendering
+    this.ctx    = canvas.getContext('2d', { alpha: false, desynchronized: true });
     this.game   = gameManager;
     this.theme  = gameManager.map.theme.colors;
 
-    // High DPI / Retina Crisp Display Support
-    const dpr = window.devicePixelRatio || 1;
+    // Mobile DPR Capping (Cap at 1.5 to prevent 3x/4x mobile GPU fill-rate throttling)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const maxDpr   = isMobile ? 1.5 : 2.0;
+    const dpr      = Math.min(window.devicePixelRatio || 1, maxDpr);
+    
     this.dpr = dpr;
     canvas.width  = CANVAS_W * dpr;
     canvas.height = CANVAS_H * dpr;

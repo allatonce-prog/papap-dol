@@ -59,16 +59,22 @@ export class MobileControls {
     zone.addEventListener('touchcancel', e => this._joyEnd(e),    { passive: false });
 
     // Bomb button (Place Bomb)
-    this._bombBtn.addEventListener('pointerdown', e => {
-      e.preventDefault();
+    const triggerBomb = (e) => {
+      if (e.cancelable) e.preventDefault();
       this.KEYS['Space'] = true;
-    });
+      setTimeout(() => { this.KEYS['Space'] = false; }, 60);
+    };
+    this._bombBtn.addEventListener('pointerdown', triggerBomb);
+    this._bombBtn.addEventListener('touchstart', triggerBomb, { passive: false });
 
     // Detonate button (Shift)
-    this._detonateBtn.addEventListener('pointerdown', e => {
-      e.preventDefault();
+    const triggerDetonate = (e) => {
+      if (e.cancelable) e.preventDefault();
       this.KEYS['ShiftLeft'] = true;
-    });
+      setTimeout(() => { this.KEYS['ShiftLeft'] = false; }, 60);
+    };
+    this._detonateBtn.addEventListener('pointerdown', triggerDetonate);
+    this._detonateBtn.addEventListener('touchstart', triggerDetonate, { passive: false });
   }
 
   _joyStart(e) {

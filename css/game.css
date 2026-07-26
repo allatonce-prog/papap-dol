@@ -65,19 +65,21 @@
 /* ── CANVAS WRAPPER ─────────────────────────────────────────── */
 .canvas-wrapper {
   position: relative;
-  border: 2px solid rgba(233,69,96,0.4);
+  border: 2px solid rgba(233,69,96,0.5);
   border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(233,69,96,0.2),
-    0 0 40px rgba(233,69,96,0.3),
-    0 0 80px rgba(233,69,96,0.1);
   overflow: hidden;
+  will-change: transform;
+  transform: translateZ(0);
+  touch-action: none;
 }
 
 #game-canvas {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  will-change: transform;
+  transform: translateZ(0);
+  touch-action: none;
 }
 
 /* ── HUD ─────────────────────────────────────────────────────── */
